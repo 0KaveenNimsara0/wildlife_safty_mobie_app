@@ -111,6 +111,17 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // --- ADD THIS SECTION FOR KOTLIN SUPPORT ---
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    implementation 'androidx.appcompat:appcompat:1.6.1' // Or a recent version
+    // --- END OF KOTLIN SUPPORT SECTION ---
+
+
+    // --- ADD THIS LINE FOR TENSORFLOW LITE ---
+    implementation 'org.tensorflow:tensorflow-lite:2.9.0'
+    // --- END OF TENSORFLOW LITE SECTION ---
+
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
