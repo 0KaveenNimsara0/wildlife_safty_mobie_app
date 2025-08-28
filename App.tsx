@@ -14,6 +14,8 @@ import {
   UIManager,
   LayoutAnimation,
   Modal,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
 import {
   launchImageLibrary,
@@ -38,6 +40,8 @@ import snakeData from './snake_data.json';
 
 // --- Native Module for Offline Classification ---
 const {ImageClassifier} = NativeModules;
+
+const {width, height} = Dimensions.get('window');
 
 // Enable LayoutAnimation on Android
 if (
@@ -88,7 +92,6 @@ const App = () => {
     }
   };
 
-  // ... (rest of the functions: hapticTrigger, handleModeChange, etc. remain the same)
   const hapticTrigger = () => {
     const options = {
       enableVibrateFallback: true,
@@ -232,14 +235,16 @@ const App = () => {
     }
   };
 
-
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      
       <Header 
         title="Wildlife Safety" 
         onMenuPress={() => setMenuVisible(true)}
-        onEmergencyPress={() => setEmergencyVisible(true)} // Pass the function to the header
+        onEmergencyPress={() => setEmergencyVisible(true)}
       />
+      
       <Menu 
         visible={isMenuVisible} 
         onClose={() => setMenuVisible(false)}
@@ -275,141 +280,230 @@ const App = () => {
       <ScrollView
         contentContainerStyle={styles.scrollView}
         showsVerticalScrollIndicator={false}>
-        <Animatable.View animation="fadeInDown" duration={800} delay={200}>
-          <View style={styles.modeSelector}>
-            <Text style={[styles.modeText, !isOnlineMode && styles.modeTextActive]}>
-              Offline
-            </Text>
-            <Switch
-              trackColor={{false: '#767577', true: '#a5d6a7'}}
-              thumbColor={isOnlineMode ? COLORS.primary : '#f4f3f4'}
-              onValueChange={handleModeChange}
-              value={isOnlineMode}
-            />
-            <Text style={[styles.modeText, isOnlineMode && styles.modeTextActive]}>
-              Online
+        
+        {/* Hero Section */}
+        <Animatable.View animation="fadeInDown" duration={800} delay={200} style={styles.heroSection}>
+          <View style={styles.heroContent}>
+            <Icon name="leaf-outline" size={32} color={COLORS.primary} style={styles.heroIcon} />
+            <Text style={styles.heroTitle}>Identify Wildlife Safely</Text>
+            <Text style={styles.heroSubtitle}>
+              Get instant identification and safety information for animals you encounter
             </Text>
           </View>
-          <Text style={styles.modeDescription}>
-            {isOnlineMode
-              ? 'Get detailed info from server'
-              : 'Fast, on-device identification'}
-          </Text>
+          
+          {/* Mode Selector Card */}
+          <View style={styles.modeCard}>
+            <View style={styles.modeHeader}>
+              <Icon name="settings-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.modeCardTitle}>Detection Mode</Text>
+            </View>
+            
+            <View style={styles.modeSelector}>
+              <View style={styles.modeOption}>
+                <Icon name="flash-off-outline" size={16} color={!isOnlineMode ? COLORS.primary : COLORS.lightText} />
+                <Text style={[styles.modeText, !isOnlineMode && styles.modeTextActive]}>
+                  Offline
+                </Text>
+              </View>
+              
+              <Switch
+                trackColor={{false: COLORS.switchTrack, true: COLORS.switchTrackActive}}
+                thumbColor={isOnlineMode ? COLORS.primary : COLORS.switchThumb}
+                onValueChange={handleModeChange}
+                value={isOnlineMode}
+                style={styles.switch}
+              />
+              
+              <View style={styles.modeOption}>
+                <Icon name="wifi-outline" size={16} color={isOnlineMode ? COLORS.primary : COLORS.lightText} />
+                <Text style={[styles.modeText, isOnlineMode && styles.modeTextActive]}>
+                  Online
+                </Text>
+              </View>
+            </View>
+            
+            <Text style={styles.modeDescription}>
+              {isOnlineMode
+                ? 'Enhanced accuracy with detailed server analysis'
+                : 'Quick on-device identification without internet'}
+            </Text>
+          </View>
         </Animatable.View>
 
+        {/* Image Selection Section */}
         <Animatable.View
           animation="fadeIn"
           duration={800}
           delay={400}
-          style={styles.fullWidth}>
+          style={styles.selectionSection}>
+          
+          <Text style={styles.sectionTitle}>Choose Image Source</Text>
+          
           <View style={styles.selectionTabs}>
             <TouchableOpacity
               style={[styles.tabButton, selectionMode === 'camera' && styles.tabButtonActive]}
-              onPress={() => handleSelectionModeChange('camera')}>
-              <Icon name="camera-outline" size={20} color={selectionMode === 'camera' ? '#fff' : COLORS.primary} />
+              onPress={() => handleSelectionModeChange('camera')}
+              activeOpacity={0.8}>
+              <Icon 
+                name="camera" 
+                size={22} 
+                color={selectionMode === 'camera' ? COLORS.white : COLORS.primary} 
+              />
               <Text style={[styles.tabText, selectionMode === 'camera' && styles.tabTextActive]}>
                 Camera
               </Text>
             </TouchableOpacity>
+            
             <TouchableOpacity
               style={[styles.tabButton, selectionMode === 'gallery' && styles.tabButtonActive]}
-              onPress={() => handleSelectionModeChange('gallery')}>
-              <Icon name="images-outline" size={20} color={selectionMode === 'gallery' ? '#fff' : COLORS.primary} />
+              onPress={() => handleSelectionModeChange('gallery')}
+              activeOpacity={0.8}>
+              <Icon 
+                name="images" 
+                size={22} 
+                color={selectionMode === 'gallery' ? COLORS.white : COLORS.primary} 
+              />
               <Text style={[styles.tabText, selectionMode === 'gallery' && styles.tabTextActive]}>
                 Gallery
               </Text>
             </TouchableOpacity>
           </View>
 
+          {/* Image Container */}
           <TouchableOpacity
             style={styles.imageContainer}
             onPress={handleImageSelection}
-            activeOpacity={0.7}>
+            activeOpacity={0.9}>
             {image ? (
-              <Image source={{uri: image.uri}} style={styles.image} />
+              <View style={styles.imageWrapper}>
+                <Image source={{uri: image.uri}} style={styles.image} />
+                <View style={styles.imageOverlay}>
+                  <TouchableOpacity 
+                    style={styles.changeImageButton}
+                    onPress={handleImageSelection}>
+                    <Icon name="refresh" size={20} color={COLORS.white} />
+                    <Text style={styles.changeImageText}>Change Image</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             ) : (
               <View style={styles.placeholderContainer}>
-                <Icon
-                  name={selectionMode === 'camera' ? 'camera-outline' : 'images-outline'}
-                  size={48}
-                  color="#a5b1c2"
-                />
-                <Text style={styles.placeholderText}>
+                <View style={styles.placeholderIconContainer}>
+                  <Icon
+                    name={selectionMode === 'camera' ? 'camera' : 'images'}
+                    size={48}
+                    color={COLORS.primary}
+                  />
+                </View>
+                <Text style={styles.placeholderTitle}>
                   {selectionMode === 'camera'
-                    ? 'Tap to Capture Photo'
-                    : 'Tap to Select from Gallery'}
+                    ? 'Take a Photo'
+                    : 'Select from Gallery'}
                 </Text>
+                <Text style={styles.placeholderSubtitle}>
+                  {selectionMode === 'camera'
+                    ? 'Capture an animal photo for identification'
+                    : 'Choose an image from your photo library'}
+                </Text>
+                <View style={styles.placeholderButton}>
+                  <Text style={styles.placeholderButtonText}>Tap to {selectionMode === 'camera' ? 'Capture' : 'Browse'}</Text>
+                </View>
               </View>
             )}
           </TouchableOpacity>
         </Animatable.View>
 
+        {/* Identify Button */}
         {image && (
-          <Animatable.View animation="fadeInUp" duration={600} delay={100}>
+          <Animatable.View animation="fadeInUp" duration={600} delay={100} style={styles.identifySection}>
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.identifyButton, loading && styles.identifyButtonDisabled]}
               onPress={identifyAnimal}
-              disabled={loading}>
-              <Text style={styles.buttonText}>Identify Animal</Text>
+              disabled={loading}
+              activeOpacity={0.8}>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                  <Text style={styles.loadingText}>Analyzing...</Text>
+                </View>
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Icon name="search" size={22} color={COLORS.white} />
+                  <Text style={styles.identifyButtonText}>Identify Animal</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </Animatable.View>
         )}
-        {loading && (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
-        )}
+
+        {/* Error Display */}
         {error && (
-          <Animatable.Text animation="shake" duration={600} style={styles.errorText}>
-            <Icon name="alert-circle-outline" size={18} /> {error}
-          </Animatable.Text>
+          <Animatable.View animation="shake" duration={600} style={styles.errorContainer}>
+            <Icon name="alert-circle" size={20} color={COLORS.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </Animatable.View>
         )}
+
+        {/* Results Card */}
         {resultData && (
           <Animatable.View
             ref={resultCardRef}
             style={styles.resultCard}
             animation="fadeInUp"
             duration={800}>
+            
+            <View style={styles.resultHeader}>
+              <Icon name="checkmark-circle" size={28} color={COLORS.success} />
+              <Text style={styles.resultBadge}>Identified</Text>
+            </View>
+
             <Text style={styles.resultTitle}>{resultData.Animal}</Text>
-            <Text style={styles.scientificName}>
-              {resultData.ScientificName}
-            </Text>
+            <Text style={styles.scientificName}>{resultData.ScientificName}</Text>
 
-            <View style={styles.detailRow}>
-              <Icon name="shield-checkmark-outline" size={22} style={styles.detailIcon} />
-              <Text style={styles.detailLabel}>Status:</Text>
-              <Text
-                style={[
-                  styles.detailValue,
-                  {
-                    color: resultData.ConservationStatus?.includes('Threatened')
-                      ? '#e74c3c'
-                      : '#27ae60',
-                  },
-                ]}>
-                {resultData.ConservationStatus}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Icon name="language-outline" size={22} style={styles.detailIcon} />
-              <Text style={styles.detailLabel}>Local Names:</Text>
-              <Text style={styles.detailValue}>{resultData.LocalNames}</Text>
-            </View>
-
-            <Text style={styles.sectionTitle}>
-              <Icon name="warning-outline" size={20} /> Venom & Significance
-            </Text>
-            <Text style={styles.description}>{resultData.Venom}</Text>
-
-            <Text style={styles.sectionTitle}>
-              <Icon name="information-circle-outline" size={20} /> Description
-            </Text>
-            <Text style={styles.description}>{resultData.Description}</Text>
-            {resultData.FunFact && (
-              <>
-                <Text style={styles.sectionTitle}>
-                  <Icon name="bulb-outline" size={20} /> Fun Fact
+            <View style={styles.quickInfo}>
+              <View style={styles.infoChip}>
+                <Icon name="shield-checkmark" size={16} color={COLORS.primary} />
+                <Text style={styles.infoChipText} numberOfLines={1}>
+                  {resultData.ConservationStatus}
                 </Text>
-                <Text style={styles.funFact}>{resultData.FunFact}</Text>
-              </>
+              </View>
+              
+              {resultData.LocalNames && (
+                <View style={styles.infoChip}>
+                  <Icon name="language" size={16} color={COLORS.primary} />
+                  <Text style={styles.infoChipText} numberOfLines={7}>
+                    {resultData.LocalNames}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {resultData.Venom && (
+              <View style={styles.detailSection}>
+                <View style={styles.detailHeader}>
+                  <Icon name="warning" size={20} color={COLORS.warning} />
+                  <Text style={styles.detailTitle}>Venom & Medical Significance</Text>
+                </View>
+                <Text style={styles.detailContent}>{resultData.Venom}</Text>
+              </View>
+            )}
+
+            <View style={styles.detailSection}>
+              <View style={styles.detailHeader}>
+                <Icon name="information-circle" size={20} color={COLORS.info} />
+                <Text style={styles.detailTitle}>Description</Text>
+              </View>
+              <Text style={styles.detailContent}>{resultData.Description}</Text>
+            </View>
+
+            {resultData.FunFact && (
+              <View style={styles.funFactSection}>
+                <View style={styles.detailHeader}>
+                  <Icon name="bulb" size={20} color={COLORS.accent} />
+                  <Text style={styles.detailTitle}>Did You Know?</Text>
+                </View>
+                <Text style={styles.funFactText}>{resultData.FunFact}</Text>
+              </View>
             )}
           </Animatable.View>
         )}
@@ -418,49 +512,154 @@ const App = () => {
   );
 };
 
-// --- New Green-Themed Color Palette ---
+// --- Enhanced Color Palette ---
 const COLORS = {
-  primary: '#2E7D32', // Darker Green
-  secondary: '#66BB6A', // Lighter Green
-  background: '#F0F4F0', // Very light green/grey
+  primary: '#2E7D32',
+  secondary: '#4CAF50',
+  background: '#FAFAFA',
+  surface: '#FFFFFF',
+  surfaceVariant: '#F8F9FA',
   white: '#FFFFFF',
-  darkText: '#1B2021',
-  lightText: '#5F7A61',
+  darkText: '#212121',
+  mediumText: '#424242',
+  lightText: '#757575',
   error: '#D32F2F',
-  card: '#FFFFFF',
-  border: '#DDE2DD',
+  success: '#388E3C',
+  warning: '#F57C00',
+  info: '#1976D2',
+  accent: '#7B1FA2',
+  border: '#E0E0E0',
+  borderLight: '#F0F0F0',
+  switchTrack: '#E0E0E0',
+  switchTrackActive: '#A5D6A7',
+  switchThumb: '#FAFAFA',
+  overlay: 'rgba(0, 0, 0, 0.3)',
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: COLORS.background},
-  scrollView: {padding: 20, alignItems: 'center'},
-  fullWidth: {width: '100%', alignItems: 'center'},
-  modeSelector: {flexDirection: 'row', alignItems: 'center', marginBottom: 5},
-  modeText: {fontSize: 16, marginHorizontal: 10, color: COLORS.lightText},
-  modeTextActive: {fontWeight: 'bold', color: COLORS.primary},
-  modeDescription: {fontSize: 14, color: COLORS.lightText, marginBottom: 20},
+  container: {
+    flex: 1, 
+    backgroundColor: COLORS.background
+  },
+  scrollView: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  
+  // Hero Section
+  heroSection: {
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  heroContent: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  heroIcon: {
+    marginBottom: 12,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.darkText,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: COLORS.mediumText,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+  
+  // Mode Card
+  modeCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  modeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modeCardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.darkText,
+    marginLeft: 8,
+  },
+  modeSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  modeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modeText: {
+    fontSize: 16,
+    marginLeft: 8,
+    color: COLORS.lightText,
+    fontWeight: '500',
+  },
+  modeTextActive: {
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  switch: {
+    transform: [{scaleX: 1.1}, {scaleY: 1.1}],
+    marginHorizontal: 20,
+  },
+  modeDescription: {
+    fontSize: 14,
+    color: COLORS.mediumText,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  // Selection Section
+  selectionSection: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.darkText,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   selectionTabs: {
     flexDirection: 'row',
-    backgroundColor: '#E8F5E9',
-    borderRadius: 30,
-    padding: 5,
-    marginBottom: 20,
-    width: '90%',
+    backgroundColor: COLORS.surfaceVariant,
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 24,
   },
   tabButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 25,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
   },
   tabButtonActive: {
     backgroundColor: COLORS.primary,
-    shadowColor: '#000',
+    shadowColor: COLORS.primary,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 6,
   },
   tabText: {
@@ -472,79 +671,181 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: COLORS.white,
   },
+
+  // Image Container
   imageContainer: {
     width: '100%',
-    height: 300,
-    backgroundColor: COLORS.card,
+    height: 280,
+    backgroundColor: COLORS.surface,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+  },
+  imageWrapper: {
+    flex: 1,
+    position: 'relative',
   },
   image: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: COLORS.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0,
+  },
+  changeImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  changeImageText: {
+    color: COLORS.darkText,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
   placeholderContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 40,
   },
-  placeholderText: {
-    color: COLORS.lightText,
-    fontSize: 18,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    width: '80%',
+  placeholderIconContainer: {
+    width: 80,
+    height: 80,
+    backgroundColor: COLORS.surfaceVariant,
+    borderRadius: 40,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
   },
-  buttonText: {
+  placeholderTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.darkText,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  placeholderSubtitle: {
+    fontSize: 14,
+    color: COLORS.mediumText,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  placeholderButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  placeholderButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Identify Section
+  identifySection: {
+    marginBottom: 30,
+  },
+  identifyButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  identifyButtonDisabled: {
+    backgroundColor: COLORS.lightText,
+    shadowOpacity: 0.1,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  identifyButtonText: {
     color: COLORS.white,
     fontSize: 18,
     fontWeight: 'bold',
+    marginLeft: 8,
   },
-  loader: {marginVertical: 20},
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: COLORS.white,
+    fontSize: 16,
+    marginLeft: 12,
+    fontWeight: '600',
+  },
+
+  // Error Container
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(211, 47, 47, 0.1)',
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.error,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
   errorText: {
-    marginTop: 20,
     fontSize: 16,
     color: COLORS.error,
-    textAlign: 'center',
-    fontWeight: '600',
-    padding: 10,
-    backgroundColor: 'rgba(211, 47, 47, 0.1)',
-    borderRadius: 10,
-    width: '100%',
+    marginLeft: 12,
+    flex: 1,
+    fontWeight: '500',
   },
+
+  // Results Card
   resultCard: {
-    width: '100%',
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.surface,
     borderRadius: 20,
-    padding: 20,
-    marginTop: 15,
-    elevation: 5,
+    padding: 24,
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: {width: 0, height: 6},
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  resultBadge: {
+    backgroundColor: COLORS.success,
+    color: COLORS.white,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   resultTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: COLORS.darkText,
     marginBottom: 4,
@@ -553,66 +854,67 @@ const styles = StyleSheet.create({
   scientificName: {
     fontSize: 16,
     fontStyle: 'italic',
-    color: COLORS.lightText,
-    marginBottom: 25,
+    color: COLORS.mediumText,
+    marginBottom: 20,
     textAlign: 'center',
   },
-  detailRow: {
+  quickInfo: {
     flexDirection: 'row',
-    marginBottom: 12,
+    flexWrap: 'wrap',
+    marginBottom: 24,
+    justifyContent: 'center',
+  },
+  infoChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FBF9',
-    padding: 12,
+    backgroundColor: COLORS.surfaceVariant,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    margin: 4,
+    maxWidth: width * 0.4,
+  },
+  infoChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.mediumText,
+    marginLeft: 4,
+  },
+  detailSection: {
+    marginBottom: 20,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  detailTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.darkText,
+    marginLeft: 8,
+  },
+  detailContent: {
+    fontSize: 16,
+    color: COLORS.mediumText,
+    lineHeight: 24,
+    backgroundColor: COLORS.surfaceVariant,
+    padding: 16,
     borderRadius: 12,
   },
-  detailIcon: {
-    color: COLORS.primary,
-    marginRight: 12,
+  funFactSection: {
+    backgroundColor: 'rgba(123, 31, 162, 0.05)',
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.accent,
   },
-  detailLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.darkText,
-    marginRight: 8,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: COLORS.lightText,
-    flexShrink: 1,
-    flex: 1,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.darkText,
-    marginTop: 20,
-    marginBottom: 10,
-    borderTopColor: COLORS.background,
-    borderTopWidth: 1,
-    paddingTop: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  description: {
+  funFactText: {
     fontSize: 16,
     color: COLORS.darkText,
     lineHeight: 24,
-    backgroundColor: '#F9FBF9',
-    padding: 16,
-    borderRadius: 12,
-  },
-  funFact: {
-    fontSize: 16,
-    color: '#16a085',
     fontStyle: 'italic',
-    lineHeight: 22,
-    backgroundColor: 'rgba(46, 204, 113, 0.1)',
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 5,
-    borderLeftColor: '#2ecc71',
   },
 });
-
+    
 export default App;
