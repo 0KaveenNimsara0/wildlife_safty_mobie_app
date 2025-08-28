@@ -6,7 +6,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 interface MenuProps {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (screen: 'Home' | 'About' | 'Settings') => void;
+  onNavigate: (screen: 'Home' | 'About' | 'Settings' | 'Directory') => void;
 }
 
 const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
@@ -31,6 +31,7 @@ const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
 
             <View style={styles.menuItemsGroup}>
               <MenuItem icon="home-outline" text="Home" onPress={() => onNavigate('Home')} />
+              <MenuItem icon="list-outline" text="Snake Details" onPress={() => onNavigate('Directory')} />
               <MenuItem icon="information-circle-outline" text="About Us" onPress={() => onNavigate('About')} />
               <MenuItem icon="settings-outline" text="Settings" onPress={() => onNavigate('Settings')} />
             </View>
@@ -48,7 +49,8 @@ const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
 // A reusable MenuItem component to keep the code clean
 const MenuItem: React.FC<{icon: string, text: string, onPress: () => void}> = ({ icon, text, onPress }) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-      <Icon name={icon} size={24} color="#3498db" style={styles.menuItemIcon} />
+      {/* --- Updated Icon Color --- */}
+      <Icon name={icon} size={24} color="#2E7D32" style={styles.menuItemIcon} />
       <Text style={styles.menuItemText}>{text}</Text>
     </TouchableOpacity>
 );

@@ -13,7 +13,7 @@ import {
   Platform,
   UIManager,
   LayoutAnimation,
-  Modal, // Import Modal
+  Modal,
 } from 'react-native';
 import {
   launchImageLibrary,
@@ -26,10 +26,11 @@ import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
 import HapticFeedback from 'react-native-haptic-feedback';
 
-// --- Import the components ---
+// --- Import the components (Corrected Paths) ---
 import Header from './android/app/src/main/components/Header';
 import Menu from './android/app/src/main/components/Menu';
-import AboutScreen from './android/app/src/main/screens/AboutScreen'; // Import the new About screen
+import AboutScreen from './android/app/src/main/screens/AboutScreen';
+import SnakeDirectoryScreen from './android/app/src/main/screens/SnakeDirectoryScreen';
 
 // --- Import the local snake data for offline use ---
 import snakeData from './snake_data.json';
@@ -59,27 +60,23 @@ interface AnimalDetails {
 
 const App = () => {
   const [image, setImage] = useState<Asset | null>(null);
-  const [resultData, setResultData] = useState<Partial<AnimalDetails> | null>(
-    null,
-  );
+  const [resultData, setResultData] = useState<Partial<AnimalDetails> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOnlineMode, setIsOnlineMode] = useState(true);
-  const [selectionMode, setSelectionMode] = useState<'camera' | 'gallery'>(
-    'gallery',
-  );
+  const [selectionMode, setSelectionMode] = useState<'camera' | 'gallery'>('gallery');
   const [isMenuVisible, setMenuVisible] = useState(false);
-  const [isAboutVisible, setAboutVisible] = useState(false); // State for About screen
+  const [isAboutVisible, setAboutVisible] = useState(false);
+  const [isDirectoryVisible, setDirectoryVisible] = useState(false);
   const resultCardRef = useRef<Animatable.View & View>(null);
 
-  const handleNavigation = (screen: 'Home' | 'About' | 'Settings') => {
-    setMenuVisible(false); // Close the menu
+  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory') => {
+    setMenuVisible(false);
     if (screen === 'About') {
-      setTimeout(() => setAboutVisible(true), 300); // Open About screen after a short delay
+      setTimeout(() => setAboutVisible(true), 300);
     }
-    // Handle other screens if needed
-    if (screen === 'Home') {
-      // Already on home, do nothing or scroll to top
+    if (screen === 'Directory') {
+      setTimeout(() => setDirectoryVisible(true), 300);
     }
     if (screen === 'Settings') {
       Alert.alert('Settings', 'Settings screen is not yet implemented.');
@@ -178,7 +175,7 @@ const App = () => {
       const predictedClass = await ImageClassifier.classifyImage(imageUri);
       const lookupKey = predictedClass.toLowerCase().trim();
       const details = snakeData.find(
-        snake =>
+        (snake: any) =>
           snake['Common English Name(s)'].toLowerCase().trim() === lookupKey,
       );
       if (details) {
@@ -249,27 +246,29 @@ const App = () => {
         <AboutScreen onClose={() => setAboutVisible(false)} />
       </Modal>
 
+      <Modal
+        visible={isDirectoryVisible}
+        animationType="slide"
+        onRequestClose={() => setDirectoryVisible(false)}
+      >
+        <SnakeDirectoryScreen onClose={() => setDirectoryVisible(false)} />
+      </Modal>
+
       <ScrollView
         contentContainerStyle={styles.scrollView}
         showsVerticalScrollIndicator={false}>
-        {/* ... The rest of your JSX for the main screen ... */}
         <Animatable.View animation="fadeInDown" duration={800} delay={200}>
           <View style={styles.modeSelector}>
-            <Text
-              style={[
-                styles.modeText,
-                !isOnlineMode && styles.modeTextActive,
-              ]}>
+            <Text style={[styles.modeText, !isOnlineMode && styles.modeTextActive]}>
               Offline
             </Text>
             <Switch
-              trackColor={{false: '#767577', true: '#81b0ff'}}
-              thumbColor={isOnlineMode ? '#3498db' : '#f4f3f4'}
+              trackColor={{false: '#767577', true: '#a5d6a7'}}
+              thumbColor={isOnlineMode ? COLORS.primary : '#f4f3f4'}
               onValueChange={handleModeChange}
               value={isOnlineMode}
             />
-            <Text
-              style={[styles.modeText, isOnlineMode && styles.modeTextActive]}>
+            <Text style={[styles.modeText, isOnlineMode && styles.modeTextActive]}>
               Online
             </Text>
           </View>
@@ -287,40 +286,18 @@ const App = () => {
           style={styles.fullWidth}>
           <View style={styles.selectionTabs}>
             <TouchableOpacity
-              style={[
-                styles.tabButton,
-                selectionMode === 'camera' && styles.tabButtonActive,
-              ]}
+              style={[styles.tabButton, selectionMode === 'camera' && styles.tabButtonActive]}
               onPress={() => handleSelectionModeChange('camera')}>
-              <Icon
-                name="camera-outline"
-                size={20}
-                color={selectionMode === 'camera' ? '#fff' : '#3498db'}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  selectionMode === 'camera' && styles.tabTextActive,
-                ]}>
+              <Icon name="camera-outline" size={20} color={selectionMode === 'camera' ? '#fff' : COLORS.primary} />
+              <Text style={[styles.tabText, selectionMode === 'camera' && styles.tabTextActive]}>
                 Camera
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.tabButton,
-                selectionMode === 'gallery' && styles.tabButtonActive,
-              ]}
+              style={[styles.tabButton, selectionMode === 'gallery' && styles.tabButtonActive]}
               onPress={() => handleSelectionModeChange('gallery')}>
-              <Icon
-                name="images-outline"
-                size={20}
-                color={selectionMode === 'gallery' ? '#fff' : '#3498db'}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  selectionMode === 'gallery' && styles.tabTextActive,
-                ]}>
+              <Icon name="images-outline" size={20} color={selectionMode === 'gallery' ? '#fff' : COLORS.primary} />
+              <Text style={[styles.tabText, selectionMode === 'gallery' && styles.tabTextActive]}>
                 Gallery
               </Text>
             </TouchableOpacity>
@@ -335,13 +312,9 @@ const App = () => {
             ) : (
               <View style={styles.placeholderContainer}>
                 <Icon
-                  name={
-                    selectionMode === 'camera'
-                      ? 'camera-outline'
-                      : 'images-outline'
-                  }
+                  name={selectionMode === 'camera' ? 'camera-outline' : 'images-outline'}
                   size={48}
-                  color="#aab8c2"
+                  color="#a5b1c2"
                 />
                 <Text style={styles.placeholderText}>
                   {selectionMode === 'camera'
@@ -364,17 +337,10 @@ const App = () => {
           </Animatable.View>
         )}
         {loading && (
-          <ActivityIndicator
-            size="large"
-            color="#3498db"
-            style={styles.loader}
-          />
+          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
         )}
         {error && (
-          <Animatable.Text
-            animation="shake"
-            duration={600}
-            style={styles.errorText}>
+          <Animatable.Text animation="shake" duration={600} style={styles.errorText}>
             <Icon name="alert-circle-outline" size={18} /> {error}
           </Animatable.Text>
         )}
@@ -390,32 +356,22 @@ const App = () => {
             </Text>
 
             <View style={styles.detailRow}>
-              <Icon
-                name="shield-checkmark-outline"
-                size={22}
-                style={styles.detailIcon}
-              />
+              <Icon name="shield-checkmark-outline" size={22} style={styles.detailIcon} />
               <Text style={styles.detailLabel}>Status:</Text>
               <Text
                 style={[
                   styles.detailValue,
                   {
-                    color: resultData.ConservationStatus?.includes(
-                      'Threatened',
-                    )
+                    color: resultData.ConservationStatus?.includes('Threatened')
                       ? '#e74c3c'
-                      : '#2ecc71',
+                      : '#27ae60',
                   },
                 ]}>
                 {resultData.ConservationStatus}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Icon
-                name="language-outline"
-                size={22}
-                style={styles.detailIcon}
-              />
+              <Icon name="language-outline" size={22} style={styles.detailIcon} />
               <Text style={styles.detailLabel}>Local Names:</Text>
               <Text style={styles.detailValue}>{resultData.LocalNames}</Text>
             </View>
@@ -444,17 +400,17 @@ const App = () => {
   );
 };
 
-// --- Styles (using the same modern StyleSheet from the previous update) ---
+// --- New Green-Themed Color Palette ---
 const COLORS = {
-  primary: '#3498db',
-  secondary: '#2ecc71',
-  background: '#ecf0f1',
-  white: '#ffffff',
-  darkText: '#2c3e50',
-  lightText: '#7f8c8d',
-  error: '#e74c3c',
-  card: '#ffffff',
-  border: '#bdc3c7',
+  primary: '#2E7D32', // Darker Green
+  secondary: '#66BB6A', // Lighter Green
+  background: '#F0F4F0', // Very light green/grey
+  white: '#FFFFFF',
+  darkText: '#1B2021',
+  lightText: '#5F7A61',
+  error: '#D32F2F',
+  card: '#FFFFFF',
+  border: '#DDE2DD',
 };
 
 const styles = StyleSheet.create({
@@ -467,7 +423,7 @@ const styles = StyleSheet.create({
   modeDescription: {fontSize: 14, color: COLORS.lightText, marginBottom: 20},
   selectionTabs: {
     flexDirection: 'row',
-    backgroundColor: '#dfe6e9',
+    backgroundColor: '#E8F5E9',
     borderRadius: 30,
     padding: 5,
     marginBottom: 20,
@@ -553,7 +509,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
     padding: 10,
-    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+    backgroundColor: 'rgba(211, 47, 47, 0.1)',
     borderRadius: 10,
     width: '100%',
   },
@@ -587,7 +543,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 12,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F9FBF9',
     padding: 12,
     borderRadius: 12,
   },
@@ -624,7 +580,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.darkText,
     lineHeight: 24,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F9FBF9',
     padding: 16,
     borderRadius: 12,
   },
