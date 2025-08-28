@@ -1,3 +1,4 @@
+// App.tsx
 import React, {useState} from 'react';
 import {
   View,
@@ -5,7 +6,6 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   Alert,
   TouchableOpacity,
@@ -18,6 +18,10 @@ import {
   Asset,
 } from 'react-native-image-picker';
 import {NativeModules} from 'react-native';
+
+// --- Import the new components ---
+import Header from './android/app/src/main/components/Header';
+import Menu from './android/app/src/main/components/Menu';
 
 // --- Import the local snake data for offline use ---
 import snakeData from './snake_data.json'; 
@@ -44,6 +48,9 @@ const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [isOnlineMode, setIsOnlineMode] = useState(true);
   const [selectionMode, setSelectionMode] = useState<'camera' | 'gallery'>('gallery');
+  
+  // --- State to control the menu visibility ---
+  const [isMenuVisible, setMenuVisible] = useState(false);
 
   const handleModeChange = (newMode: boolean) => {
     setIsOnlineMode(newMode);
@@ -172,9 +179,11 @@ const App = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <Header title="Wildlife Safety" onMenuPress={() => setMenuVisible(true)} />
+      <Menu visible={isMenuVisible} onClose={() => setMenuVisible(false)} />
+      
       <ScrollView contentContainerStyle={styles.scrollView}>
-        <Text style={styles.title}>Wildlife Safety</Text>
         <View style={styles.modeSelector}>
           <Text style={styles.modeText}>Offline</Text>
           <Switch
@@ -223,6 +232,7 @@ const App = () => {
             </View>
           )}
         </TouchableOpacity>
+
         {image && (
           <TouchableOpacity style={styles.button} onPress={identifyAnimal} disabled={loading}>
             <Text style={styles.buttonText}>Identify Animal</Text>
@@ -257,14 +267,14 @@ const App = () => {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
+// Styles remain the same, but the 'title' style is no longer needed
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f0f4f7'},
   scrollView: {padding: 20, alignItems: 'center'},
-  title: {fontSize: 32, fontWeight: 'bold', marginBottom: 10, color: '#333'},
   modeSelector: {flexDirection: 'row', alignItems: 'center', marginBottom: 5},
   modeText: {fontSize: 16, marginHorizontal: 10},
   modeDescription: {fontSize: 14, color: '#666', marginBottom: 20},
