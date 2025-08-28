@@ -31,6 +31,7 @@ import Header from './android/app/src/main/components/Header';
 import Menu from './android/app/src/main/components/Menu';
 import AboutScreen from './android/app/src/main/screens/AboutScreen';
 import SnakeDirectoryScreen from './android/app/src/main/screens/SnakeDirectoryScreen';
+import EmergencyScreen from './android/app/src/main/screens/EmergencyScreen';
 
 // --- Import the local snake data for offline use ---
 import snakeData from './snake_data.json';
@@ -68,15 +69,19 @@ const App = () => {
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [isAboutVisible, setAboutVisible] = useState(false);
   const [isDirectoryVisible, setDirectoryVisible] = useState(false);
+  const [isEmergencyVisible, setEmergencyVisible] = useState(false);
   const resultCardRef = useRef<Animatable.View & View>(null);
 
-  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory') => {
+  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency') => {
     setMenuVisible(false);
     if (screen === 'About') {
       setTimeout(() => setAboutVisible(true), 300);
     }
     if (screen === 'Directory') {
       setTimeout(() => setDirectoryVisible(true), 300);
+    }
+     if (screen === 'Emergency') {
+        setTimeout(() => setEmergencyVisible(true), 300);
     }
     if (screen === 'Settings') {
       Alert.alert('Settings', 'Settings screen is not yet implemented.');
@@ -252,6 +257,14 @@ const App = () => {
         onRequestClose={() => setDirectoryVisible(false)}
       >
         <SnakeDirectoryScreen onClose={() => setDirectoryVisible(false)} />
+      </Modal>
+      {/* --- Emergency Screen Modal --- */}
+      <Modal
+        visible={isEmergencyVisible}
+        animationType="slide"
+        onRequestClose={() => setEmergencyVisible(false)}
+      >
+        <EmergencyScreen onClose={() => setEmergencyVisible(false)} />
       </Modal>
 
       <ScrollView

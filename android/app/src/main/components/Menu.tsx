@@ -6,7 +6,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 interface MenuProps {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (screen: 'Home' | 'About' | 'Settings' | 'Directory') => void;
+  onNavigate: (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency') => void;
 }
 
 const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
@@ -32,6 +32,7 @@ const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
             <View style={styles.menuItemsGroup}>
               <MenuItem icon="home-outline" text="Home" onPress={() => onNavigate('Home')} />
               <MenuItem icon="list-outline" text="Snake Details" onPress={() => onNavigate('Directory')} />
+              <MenuItem icon="medkit-outline" text="Emergency Info" onPress={() => onNavigate('Emergency')} />
               <MenuItem icon="information-circle-outline" text="About Us" onPress={() => onNavigate('About')} />
               <MenuItem icon="settings-outline" text="Settings" onPress={() => onNavigate('Settings')} />
             </View>
