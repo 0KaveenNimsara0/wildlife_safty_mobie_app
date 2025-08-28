@@ -71,6 +71,7 @@ const SnakeDetailScreen: React.FC<{snake: Snake; onGoBack: () => void}> = ({
           <Text style={styles.detailTitle}>{snake['Common English Name(s)']}</Text>
           <Text style={styles.detailScientificName}>{snake['Scientific Name & Authority']}</Text>
 
+          <DetailRow label='Local Names' value={snake['Local Name(s) (Sinhala/Tamil)']} icon="information-circle-outline"/>
           <DetailRow label="Venom" value={snake['Venom & Medical Significance']} icon="warning-outline" />
           <DetailRow label="Description" value={snake['A detailed description']} icon="information-circle-outline"/>
           <DetailRow label="How to Recognize" value={snake['how to find(recognize)']} icon="eye-outline" />
