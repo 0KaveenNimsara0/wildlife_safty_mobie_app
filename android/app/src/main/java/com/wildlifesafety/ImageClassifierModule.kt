@@ -26,7 +26,7 @@ class ImageClassifierModule(reactContext: ReactApplicationContext) : ReactContex
     private var initializationError: Exception? = null
 
     companion object {
-        private const val MODEL_FILE = "snake_classifier.tflite"
+        private const val MODEL_FILE = "snake_model.tflite"
         private const val LABELS_FILE = "labels.txt"
         private const val INPUT_WIDTH = 224
         private const val INPUT_HEIGHT = 224
