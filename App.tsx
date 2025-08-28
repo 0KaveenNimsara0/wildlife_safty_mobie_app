@@ -235,7 +235,11 @@ const App = () => {
 
   return (
     <View style={styles.container}>
-      <Header title="Wildlife Safety" onMenuPress={() => setMenuVisible(true)} />
+      <Header 
+        title="Wildlife Safety" 
+        onMenuPress={() => setMenuVisible(true)}
+        onEmergencyPress={() => setEmergencyVisible(true)} // Pass the function to the header
+      />
       <Menu 
         visible={isMenuVisible} 
         onClose={() => setMenuVisible(false)}
@@ -258,6 +262,7 @@ const App = () => {
       >
         <SnakeDirectoryScreen onClose={() => setDirectoryVisible(false)} />
       </Modal>
+
       {/* --- Emergency Screen Modal --- */}
       <Modal
         visible={isEmergencyVisible}
