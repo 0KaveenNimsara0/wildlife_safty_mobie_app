@@ -36,7 +36,14 @@ class ImageClassifierModule(reactContext: ReactApplicationContext) : ReactContex
 
     init {
         // Initialize the classifier when the module is created
+        println("🔄 ImageClassifierModule initializing...")
         initializeClassifier()
+        println("🗒️ Model file used: $MODEL_FILE")
+    }
+
+    @ReactMethod
+    fun getModelFileName(promise: Promise) {
+        promise.resolve(MODEL_FILE)
     }
 
     override fun getName() = "ImageClassifier"
@@ -65,64 +72,98 @@ class ImageClassifierModule(reactContext: ReactApplicationContext) : ReactContex
 
     @ReactMethod
     fun classifyImage(imageUri: String, promise: Promise) {
+        println("🔍 classifyImage called with URI: $imageUri")
+        
         // First, check if initialization failed
         if (tflite == null || labels == null) {
             val errorMessage = initializationError?.message ?: "Classifier is not initialized."
+            println("❌ Classifier initialization failed: $errorMessage")
             promise.reject("INIT_ERROR", "Failed to initialize TFLite classifier: $errorMessage")
             return
         }
+
+        println("✅ TFLite model loaded successfully")
+        println("📋 Available labels: ${labels!!.joinToString(", ")}")
 
         try {
             // 1. Load the image from the URI and resize it
             val bitmap = loadImage(imageUri)
             val resizedBitmap = Bitmap.createScaledBitmap(bitmap, INPUT_WIDTH, INPUT_HEIGHT, true)
+            println("📸 Image loaded and resized to ${INPUT_WIDTH}x${INPUT_HEIGHT}")
 
             // 2. Convert the bitmap to a ByteBuffer for the model
             val byteBuffer = convertBitmapToByteBuffer(resizedBitmap)
+            println("🔄 Image converted to ByteBuffer")
 
             // 3. Prepare the output buffer
             val outputBuffer = Array(1) { FloatArray(labels!!.size) }
 
             // 4. Run inference
             tflite?.run(byteBuffer, outputBuffer)
+            println("🤖 Inference completed")
 
             // 5. Find the result with the highest confidence
             val maxIndex = outputBuffer[0].indices.maxByOrNull { outputBuffer[0][it] } ?: -1
             if (maxIndex == -1) {
+                println("❌ Could not determine prediction from model output")
                 promise.reject("INFERENCE_ERROR", "Could not determine prediction from model output.")
                 return
             }
             
+            // Log confidence scores for debugging
+            val confidenceScores = outputBuffer[0].mapIndexed { index, score -> 
+                "${labels!![index]}: ${String.format("%.2f", score)}" 
+            }.joinToString(", ")
+            println("📊 Confidence scores: $confidenceScores")
+            
             // 6. Return the predicted label to JavaScript
             val result = labels!![maxIndex]
+            val confidence = outputBuffer[0][maxIndex]
+            println("🎯 Predicted: $result (confidence: ${String.format("%.2f", confidence)})")
+            
             promise.resolve(result)
 
         } catch (e: Exception) {
-            promise.reject("CLASSIFY_ERROR", "Failed to classify image: ${e.message}")
+            println("❌ Classification error: ${e.message}")
             e.printStackTrace()
+            promise.reject("CLASSIFY_ERROR", "Failed to classify image: ${e.message}")
         }
     }
 
     @Throws(IOException::class)
     private fun loadModelFile(): ByteBuffer {
-        val fileDescriptor = reactApplicationContext.assets.openFd(MODEL_FILE)
-        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
-        val fileChannel = inputStream.channel
-        val startOffset = fileDescriptor.startOffset
-        val declaredLength = fileDescriptor.declaredLength
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+        println("📦 Loading model file: $MODEL_FILE")
+        try {
+            val fileDescriptor = reactApplicationContext.assets.openFd(MODEL_FILE)
+            val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
+            val fileChannel = inputStream.channel
+            val startOffset = fileDescriptor.startOffset
+            val declaredLength = fileDescriptor.declaredLength
+            println("✅ Model file loaded successfully (size: $declaredLength bytes)")
+            return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+        } catch (e: Exception) {
+            println("❌ Failed to load model file: ${e.message}")
+            throw e
+        }
     }
 
     @Throws(IOException::class)
     private fun loadLabels(): List<String> {
+        println("📋 Loading labels from: $LABELS_FILE")
         val labels = ArrayList<String>()
-        val reader = BufferedReader(InputStreamReader(reactApplicationContext.assets.open(LABELS_FILE)))
-        var line: String?
-        while (reader.readLine().also { line = it } != null) {
-            labels.add(line!!)
+        try {
+            val reader = BufferedReader(InputStreamReader(reactApplicationContext.assets.open(LABELS_FILE)))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                labels.add(line!!)
+            }
+            reader.close()
+            println("✅ Labels loaded: ${labels.size} classes")
+            return labels
+        } catch (e: Exception) {
+            println("❌ Failed to load labels: ${e.message}")
+            throw e
         }
-        reader.close()
-        return labels
     }
     
     @Throws(IOException::class)

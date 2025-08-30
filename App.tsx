@@ -76,6 +76,24 @@ const App = () => {
   const [isEmergencyVisible, setEmergencyVisible] = useState(false);
   const resultCardRef = useRef<Animatable.View & View>(null);
 
+  React.useEffect(() => {
+    if (ImageClassifier && ImageClassifier.getModelFileName) {
+      ImageClassifier.getModelFileName()
+        .then((modelFileName: string) => {
+          console.log('🐍 Loaded model file:', modelFileName);
+          // Optional: Uncomment the line below to show alert for debugging
+          // Alert.alert('Loaded model file', modelFileName);
+        })
+        .catch((error: any) => {
+          console.error('Error fetching model file name:', error);
+          // Optional: Uncomment the line below to show alert for debugging
+          // Alert.alert('Error fetching model file name', String(error));
+        });
+    } else {
+      console.warn('ImageClassifier.getModelFileName method not available');
+    }
+  }, []);
+
   const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency') => {
     setMenuVisible(false);
     if (screen === 'About') {
