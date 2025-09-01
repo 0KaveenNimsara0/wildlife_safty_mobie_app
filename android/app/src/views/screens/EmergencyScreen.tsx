@@ -35,7 +35,7 @@ const EmergencyScreen: React.FC<{navigation?: any; onClose?: () => void}> = ({na
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollView}>
+      <ScrollView style={{flex:1}} contentContainerStyle={styles.scrollView}>
         {/* Emergency Contacts Section */}
         <Animatable.View animation="fadeInUp" duration={600} delay={200}>
           <Text style={styles.sectionTitle}>Emergency Contacts</Text>

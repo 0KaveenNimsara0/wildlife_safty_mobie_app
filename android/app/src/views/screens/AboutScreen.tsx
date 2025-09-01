@@ -34,7 +34,7 @@ const AboutScreen: React.FC<AboutScreenProps> = ({ navigation, onClose }) => {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={styles.scrollView}>
+      <ScrollView style={{flex:1}} contentContainerStyle={styles.scrollView}>
         <Animatable.View animation="fadeInUp" duration={800} delay={200}>
           <InfoCard
             icon="shield-checkmark-outline"

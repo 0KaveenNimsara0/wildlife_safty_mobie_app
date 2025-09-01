@@ -59,8 +59,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const [resultData, setResultData] = useState<Partial<AnimalDetails> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isOnlineMode, setIsOnlineMode] = useState(true);
-  const [selectionMode, setSelectionMode] = useState<'camera' | 'gallery'>('gallery');
+  const [isOnlineMode, setIsOnlineMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState<'camera' | 'gallery'>('camera');
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [isAboutVisible, setAboutVisible] = useState(false);
   const [isDirectoryVisible, setDirectoryVisible] = useState(false);
