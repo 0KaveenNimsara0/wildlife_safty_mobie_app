@@ -7,5 +7,8 @@ export interface AnimalDetails {
   Description: string;
   ConservationStatus: string;
   FunFact?: string;
+  Treatment?: string;
+  Family?: string;
+  EndemicStatus?: string;
   error?: string;
 }

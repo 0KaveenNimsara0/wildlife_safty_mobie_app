@@ -24,6 +24,9 @@ export class IdentificationController {
           Description: details.Description,
           ConservationStatus: details['Global IUCN Red List Status'],
           FunFact: `This species is from the '${details.Family}' family.`,
+          Family: details.Family,
+          EndemicStatus: details['Endemic Status'],
+          Treatment: (details as any).Treatment || 'Seek immediate medical attention. Contact emergency services or a healthcare professional.',
         };
       } else {
         return {
@@ -45,7 +48,7 @@ export class IdentificationController {
       name: imageAsset.fileName || 'animal.jpg',
     });
     try {
-      const API_URL = 'http://192.168.1.5:5000/predict';
+      const API_URL = 'http://192.168.8.156:5000/predict';
       const response = await fetch(API_URL, {
         method: 'POST',
         body: formData,

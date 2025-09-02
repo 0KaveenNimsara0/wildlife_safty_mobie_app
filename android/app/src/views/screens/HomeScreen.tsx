@@ -378,6 +378,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
                   </Text>
                 </View>
               )}
+
+              {resultData.Family && (
+                <View style={styles.infoChip}>
+                  <Icon name="leaf" size={16} color={COLORS.primary} />
+                  <Text style={styles.infoChipText} numberOfLines={1}>
+                    {resultData.Family}
+                  </Text>
+                </View>
+              )}
+
+              {resultData.EndemicStatus && (
+                <View style={styles.infoChip}>
+                  <Icon name="location" size={16} color={COLORS.primary} />
+                  <Text style={styles.infoChipText} numberOfLines={1}>
+                    {resultData.EndemicStatus}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {resultData.Venom && (
@@ -387,6 +405,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
                   <Text style={styles.detailTitle}>Venom & Medical Significance</Text>
                 </View>
                 <Text style={styles.detailContent}>{resultData.Venom}</Text>
+              </View>
+            )}
+
+            {resultData.Treatment && (
+              <View style={styles.detailSection}>
+                <View style={styles.detailHeader}>
+                  <Icon name="medkit" size={20} color={COLORS.error} />
+                  <Text style={styles.detailTitle}>Treatment</Text>
+                </View>
+                <Text style={styles.detailContent}>{resultData.Treatment}</Text>
               </View>
             )}
 
