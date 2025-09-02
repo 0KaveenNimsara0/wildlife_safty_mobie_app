@@ -14,7 +14,8 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
 // Corrected the import path assuming snake_data.json is in the root
-import snakeData from '../assets/snakes details/sri_lanka_snakes_data.json'; 
+import snakeData from '../assets/snakes details/sri_lanka_snakes_data.json';
+import { UnsplashService } from '../../services/UnsplashService';
 
 // --- TypeScript Interface for our Snake Data ---
 interface Snake {
@@ -41,13 +42,12 @@ const getSnakeImageFolderName = (scientificName: string): string => {
 };
 
 // --- Detail Screen Component ---
-const SnakeDetailScreen: React.FC<{snake: Snake; onGoBack: () => void}> = ({
+const SnakeDetailScreen: React.FC<{snake: Snake; onGoBack: () => void; images: {[key: string]: string | null}}> = ({
   snake,
   onGoBack,
+  images,
 }) => {
-  const folderName = getSnakeImageFolderName(snake['Scientific Name & Authority']);
-  // This path assumes your assets are linked correctly.
-  const imagePath = `../assets/snakes details/${folderName}/000001.jpg`;
+  const imageUrl = images[snake['Scientific Name & Authority']];
 
   return (
     <SafeAreaView style={styles.detailContainer}>
@@ -64,7 +64,7 @@ const SnakeDetailScreen: React.FC<{snake: Snake; onGoBack: () => void}> = ({
         <Animatable.Image
           animation="fadeIn"
           duration={800}
-          source={{ uri: imagePath }}
+          source={imageUrl ? {uri: imageUrl} : {uri: 'https://via.placeholder.com/400x300?text=No+Image'}}
           style={styles.detailImage}
         />
         <View style={styles.detailContent}>
@@ -100,24 +100,25 @@ const SnakeListScreen: React.FC<{
   snakes: Snake[];
   onSelectSnake: (snake: Snake) => void;
   onClose: () => void;
+  images: {[key: string]: string | null};
 }> = ({
   snakes,
   onSelectSnake,
   onClose,
+  images,
 }) => {
   const renderItem = ({ item }: { item: Snake }) => {
     if (item['Endemic Status'].toLowerCase().includes('not found in sri lanka') || item['A detailed description'].toLowerCase().includes('not recorded from sri lanka')) {
       return null;
     }
-    const folderName = getSnakeImageFolderName(item['Scientific Name & Authority']);
-    const imagePath = `../assets/snakes_details/${folderName}/000001.jpg`;
+    const imageUrl = images[item['Scientific Name & Authority']];
 
     return (
       <Animatable.View animation="fadeInUp" duration={600}>
         <TouchableOpacity
           style={styles.listItem}
           onPress={() => onSelectSnake(item)}>
-          <Image source={{ uri: imagePath }} style={styles.listImage} />
+          <Image source={imageUrl ? {uri: imageUrl} : {uri: 'https://via.placeholder.com/60x60?text=No+Image'}} style={styles.listImage} />
           <View style={styles.listItemTextContainer}>
             <Text style={styles.listItemTitle}>{item['Common English Name(s)']}</Text>
             <Text style={styles.listItemSubtitle}>{item['Scientific Name & Authority']}</Text>
@@ -149,12 +150,29 @@ const SnakeListScreen: React.FC<{
 // --- Main Directory Screen (Parent Component) ---
 const SnakeDirectoryScreen: React.FC<{onClose: () => void}> = ({ onClose }) => {
   const [selectedSnake, setSelectedSnake] = React.useState<Snake | null>(null);
+  const [images, setImages] = React.useState<{[key: string]: string | null}>({});
+
+  React.useEffect(() => {
+    const fetchImages = async () => {
+      const imagePromises = (snakeData as Snake[]).map(async (snake) => {
+        const query = snake['Common English Name(s)'] || snake['Scientific Name & Authority'].split('(')[0].trim();
+        const imageUrl = await UnsplashService.searchImages(query);
+        return { key: snake['Scientific Name & Authority'], url: imageUrl };
+      });
+      const results = await Promise.all(imagePromises);
+      const newImages: {[key: string]: string | null} = {};
+      results.forEach(({key, url}) => newImages[key] = url);
+      setImages(newImages);
+    };
+    fetchImages();
+  }, []);
 
   if (selectedSnake) {
     return (
       <SnakeDetailScreen
         snake={selectedSnake}
         onGoBack={() => setSelectedSnake(null)}
+        images={images}
       />
     );
   }
@@ -164,6 +182,7 @@ const SnakeDirectoryScreen: React.FC<{onClose: () => void}> = ({ onClose }) => {
       snakes={snakeData as Snake[]}
       onSelectSnake={snake => setSelectedSnake(snake)}
       onClose={onClose}
+      images={images}
     />
   );
 };
