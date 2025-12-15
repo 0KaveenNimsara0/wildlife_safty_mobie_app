@@ -54,11 +54,24 @@ export class IdentificationController {
         body: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const json: AnimalDetails = await response.json();
-      if (response.ok && !json.error) {
-        return json;
+      const apiResponse: any = await response.json();
+      if (response.ok && !apiResponse.error) {
+        // Map API response keys to AnimalDetails interface
+        const mappedDetails: AnimalDetails = {
+          Animal: apiResponse.ClassName || apiResponse.CommonEnglishNames || 'Unknown',
+          ScientificName: apiResponse.ScientificName || 'Unknown',
+          LocalNames: apiResponse.LocalNames,
+          Venom: apiResponse.Venom,
+          Description: apiResponse.Description || 'No description available',
+          ConservationStatus: apiResponse.ConservationStatus || 'Unknown',
+          FunFact: apiResponse.FunFact,
+          Treatment: apiResponse.Treatment,
+          Family: apiResponse.Family,
+          EndemicStatus: apiResponse.EndemicStatus,
+        };
+        return mappedDetails;
       } else {
-        return { error: json.error || 'An unknown API error occurred.' };
+        return { error: apiResponse.error || 'An unknown API error occurred.' };
       }
     } catch (e: any) {
       return { error: 'Upload failed. Check network and server address.' };

@@ -1,6 +1,7 @@
 // screens/AboutScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
 
@@ -24,7 +25,7 @@ const AboutScreen: React.FC<AboutScreenProps> = ({ navigation, onClose }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>About Wildlife Safety</Text>
@@ -34,7 +35,11 @@ const AboutScreen: React.FC<AboutScreenProps> = ({ navigation, onClose }) => {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView style={{flex:1}} contentContainerStyle={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Animatable.View animation="fadeInUp" duration={800} delay={200}>
           <InfoCard
             icon="shield-checkmark-outline"
@@ -105,7 +110,12 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: 20,
+    paddingBottom: 40, // Add extra padding at bottom
+    flexGrow: 1,
   },
   card: {
     marginBottom: 20,
