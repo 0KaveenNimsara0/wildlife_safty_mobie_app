@@ -1,14 +1,26 @@
 export class UnsplashService {
   private static API_KEY = 'UrY7BUpS9xMkyfu9YmsUetjp5N1YLtcbnRtQ8Wy71xo';
   private static API_URL = 'https://api.unsplash.com/search/photos';
+  private static isRateLimited = false;
 
   static async searchImages(query: string, perPage = 1): Promise<string | null> {
+    if (this.isRateLimited) {
+      return null;
+    }
+
     try {
       const response = await fetch(`${this.API_URL}?query=${encodeURIComponent(query)}&per_page=${perPage}&client_id=${this.API_KEY}`, {
         headers: {
           'Accept-Version': 'v1'
         }
       });
+
+      if (response.status === 403) {
+        console.warn('Unsplash API Rate Limit Exceeded. Images will be disabled temporarily.');
+        this.isRateLimited = true;
+        return null;
+      }
+
       if (!response.ok) {
         console.error('Unsplash API error:', response.status, await response.text());
         return null;

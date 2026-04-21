@@ -1,26 +1,42 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Wildlife Safety Mobile App 🐍
+
+This is a React Native mobile application designed to promote wildlife safety by helping users identify various snake species using their device's camera. The app features both online and offline classification capabilities to ensure functionality even in remote areas.
+
+## ✨ Features
+
+- **Real-time Image Classification**: Identify snakes from your camera or gallery.
+- **Offline Mode**: Utilizes a built-in TensorFlow Lite model (`snake_model.tflite`) to identify 6 different snake species without an internet connection.
+- **Offline Model Species**: The current offline model can identify the following species:
+  - Common Indian Krait
+  - Green Vine Snake
+  - Hump-nosed pit viper
+  - Indian Cobra
+  - Python
+  - Russell's Viper
+- **Online Mode**: Leverages a remote server for a broader range of wildlife classification.
+
+## 🛠️ Tech Stack
+
+- **Framework**: React Native
+- **Language**: TypeScript
+- **On-Device ML**: TensorFlow Lite
+- **Native Modules**: Custom Kotlin/Java native modules for ML model integration on Android.
 
 # Getting Started
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Step 1: Install Dependencies
 
 ```sh
 # Using npm
-npm start
+npm install
 
 # OR using Yarn
-yarn start
+yarn install
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## Step 2: Run the App
 
 ### Android
 
@@ -34,16 +50,7 @@ yarn android
 
 ### iOS
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
+> For iOS, you must install the CocoaPods dependencies first.
 ```sh
 bundle exec pod install
 ```

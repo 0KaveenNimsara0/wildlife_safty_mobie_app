@@ -1,5 +1,5 @@
 // FILE: ImageClassifierModule.kt
-// This version is corrected with the proper model file name.
+// This version is updated for robustness and clear error handling.
 
 package com.wildlifesafety // Make sure this matches your project's package name
 
@@ -26,8 +26,7 @@ class ImageClassifierModule(reactContext: ReactApplicationContext) : ReactContex
     private var initializationError: Exception? = null
 
     companion object {
-        // --- CORRECTED MODEL FILENAME ---
-        private const val MODEL_FILE = "snake_model.tflite" 
+        private const val MODEL_FILE = "snake_classifier.tflite"
         private const val LABELS_FILE = "labels.txt"
         private const val INPUT_WIDTH = 224
         private const val INPUT_HEIGHT = 224
@@ -36,76 +35,127 @@ class ImageClassifierModule(reactContext: ReactApplicationContext) : ReactContex
     }
 
     init {
-        try {
-            tflite = Interpreter(loadModelFile())
-            labels = loadLabels()
-            println("✅ TFLite model and labels loaded successfully.")
-        } catch (e: Exception) {
-            initializationError = e
-            println("❌ TFLite model or labels failed to load: ${e.message}")
-        }
-    }
-
-    override fun getName(): String {
-        return "ImageClassifier"
+        // Initialize the classifier when the module is created
+        println("🔄 ImageClassifierModule initializing...")
+        initializeClassifier()
+        println("🗒️ Model file used: $MODEL_FILE")
     }
 
     @ReactMethod
     fun getModelFileName(promise: Promise) {
-        if (initializationError != null) {
-            promise.reject("InitializationError", "Model failed to initialize: ${initializationError?.message}")
-        } else {
-            promise.resolve(MODEL_FILE)
+        promise.resolve(MODEL_FILE)
+    }
+
+    override fun getName() = "ImageClassifier"
+
+    // Use @Synchronized to prevent race conditions during initialization
+    @Synchronized
+    private fun initializeClassifier() {
+        if (tflite != null) return // Already initialized
+
+        try {
+            // Load the model from the app's assets folder
+            val modelBuffer = loadModelFile()
+            tflite = Interpreter(modelBuffer)
+            
+            // Load the labels from the app's assets folder
+            labels = loadLabels()
+            
+            println("✅ TFLite Interpreter and labels initialized successfully.")
+
+        } catch (e: Exception) {
+            initializationError = e
+            println("❌ TFLITE INITIALIZATION FAILED: ${e.message}")
+            e.printStackTrace()
         }
     }
 
     @ReactMethod
     fun classifyImage(imageUri: String, promise: Promise) {
-        if (initializationError != null) {
-            promise.reject("InitializationError", "Image classifier is not initialized: ${initializationError?.message}")
+        println("🔍 classifyImage called with URI: $imageUri")
+        
+        // First, check if initialization failed
+        if (tflite == null || labels == null) {
+            val errorMessage = initializationError?.message ?: "Classifier is not initialized."
+            println("❌ Classifier initialization failed: $errorMessage")
+            promise.reject("INIT_ERROR", "Failed to initialize TFLite classifier: $errorMessage")
             return
         }
 
+        println("✅ TFLite model loaded successfully")
+        println("📋 Available labels: ${labels!!.joinToString(", ")}")
+
         try {
+            // 1. Load the image from the URI and resize it
             val bitmap = loadImage(imageUri)
             val resizedBitmap = Bitmap.createScaledBitmap(bitmap, INPUT_WIDTH, INPUT_HEIGHT, true)
+            println("📸 Image loaded and resized to ${INPUT_WIDTH}x${INPUT_HEIGHT}")
+
+            // 2. Convert the bitmap to a ByteBuffer for the model
             val byteBuffer = convertBitmapToByteBuffer(resizedBitmap)
-            val output = Array(1) { FloatArray(labels?.size ?: 0) }
+            println("🔄 Image converted to ByteBuffer")
 
-            tflite?.run(byteBuffer, output)
+            // 3. Prepare the output buffer
+            val outputBuffer = Array(1) { FloatArray(labels!!.size) }
 
-            val maxIndex = output[0].indices.maxByOrNull { output[0][it] } ?: -1
-            if (maxIndex != -1 && labels != null) {
-                promise.resolve(labels!![maxIndex])
-            } else {
-                promise.reject("ClassificationError", "Could not classify the image.")
+            // 4. Run inference
+            tflite?.run(byteBuffer, outputBuffer)
+            println("🤖 Inference completed")
+
+            // 5. Find the result with the highest confidence
+            val maxIndex = outputBuffer[0].indices.maxByOrNull { outputBuffer[0][it] } ?: -1
+            if (maxIndex == -1) {
+                println("❌ Could not determine prediction from model output")
+                promise.reject("INFERENCE_ERROR", "Could not determine prediction from model output.")
+                return
             }
+            
+            // Log confidence scores for debugging
+            val confidenceScores = outputBuffer[0].mapIndexed { index, score -> 
+                "${labels!![index]}: ${String.format("%.2f", score)}" 
+            }.joinToString(", ")
+            println("📊 Confidence scores: $confidenceScores")
+            
+            // 6. Return the predicted label to JavaScript
+            val result = labels!![maxIndex]
+            val confidence = outputBuffer[0][maxIndex]
+            println("🎯 Predicted: $result (confidence: ${String.format("%.2f", confidence)})")
+            
+            promise.resolve(result)
+
         } catch (e: Exception) {
-            promise.reject("ClassificationError", "Error during image classification: ${e.message}")
+            println("❌ Classification error: ${e.message}")
+            e.printStackTrace()
+            promise.reject("CLASSIFY_ERROR", "Failed to classify image: ${e.message}")
         }
     }
 
     @Throws(IOException::class)
     private fun loadModelFile(): ByteBuffer {
-        val assetManager = reactApplicationContext.assets
-        val fileDescriptor = assetManager.openFd(MODEL_FILE)
-        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
-        val fileChannel = inputStream.channel
-        val startOffset = fileDescriptor.startOffset
-        val declaredLength = fileDescriptor.declaredLength
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+        println("📦 Loading model file: $MODEL_FILE")
+        try {
+            val fileDescriptor = reactApplicationContext.assets.openFd(MODEL_FILE)
+            val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
+            val fileChannel = inputStream.channel
+            val startOffset = fileDescriptor.startOffset
+            val declaredLength = fileDescriptor.declaredLength
+            println("✅ Model file loaded successfully (size: $declaredLength bytes)")
+            return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+        } catch (e: Exception) {
+            println("❌ Failed to load model file: ${e.message}")
+            throw e
+        }
     }
-    
+
     @Throws(IOException::class)
     private fun loadLabels(): List<String> {
-        val labels = mutableListOf<String>()
+        println("📋 Loading labels from: $LABELS_FILE")
+        val labels = ArrayList<String>()
         try {
-            val assetManager = reactApplicationContext.assets
-            val inputStream = assetManager.open(LABELS_FILE)
-            val reader = BufferedReader(InputStreamReader(inputStream))
+            val reader = BufferedReader(InputStreamReader(reactApplicationContext.assets.open(LABELS_FILE)))
             var line: String?
             while (reader.readLine().also { line = it } != null) {
-                line?.let { labels.add(it) }
+                labels.add(line!!)
             }
             reader.close()
             println("✅ Labels loaded: ${labels.size} classes")
@@ -136,8 +186,8 @@ class ImageClassifierModule(reactContext: ReactApplicationContext) : ReactContex
                 val value = intValues[pixel++]
                 // Normalize pixel values to [0, 1] for the Float32 model
                 byteBuffer.putFloat(((value shr 16) and 0xFF) / 255.0f) // Red
-                byteBuffer.putFloat(((value shr 8) and 0xFF) / 255.0f) // Green
-                byteBuffer.putFloat((value and 0xFF) / 255.0f) // Blue
+                byteBuffer.putFloat(((value shr 8) and 0xFF) / 255.0f)  // Green
+                byteBuffer.putFloat((value and 0xFF) / 255.0f)         // Blue
             }
         }
         return byteBuffer

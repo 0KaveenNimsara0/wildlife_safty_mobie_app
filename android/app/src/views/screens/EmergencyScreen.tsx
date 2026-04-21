@@ -4,11 +4,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
 
@@ -21,13 +21,13 @@ const COLORS = {
   lightText: '#5F7A61',
 };
 
-const EmergencyScreen: React.FC<{navigation?: any; onClose?: () => void}> = ({navigation, onClose}) => {
+const EmergencyScreen: React.FC<{ navigation?: any; onClose?: () => void }> = ({ navigation, onClose }) => {
   const handlePhoneCall = (number: string) => {
     Linking.openURL(`tel:${number}`);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Emergency Info</Text>
         <TouchableOpacity onPress={() => onClose ? onClose() : navigation?.goBack()} style={styles.closeButton}>
@@ -35,7 +35,11 @@ const EmergencyScreen: React.FC<{navigation?: any; onClose?: () => void}> = ({na
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{flex:1}} contentContainerStyle={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Emergency Contacts Section */}
         <Animatable.View animation="fadeInUp" duration={600} delay={200}>
           <Text style={styles.sectionTitle}>Emergency Contacts</Text>
@@ -107,7 +111,7 @@ const EmergencyScreen: React.FC<{navigation?: any; onClose?: () => void}> = ({na
   );
 };
 
-const ContactItem: React.FC<{icon: string, title: string, number: string, onPress: () => void}> = ({ icon, title, number, onPress }) => (
+const ContactItem: React.FC<{ icon: string, title: string, number: string, onPress: () => void }> = ({ icon, title, number, onPress }) => (
   <TouchableOpacity style={styles.contactItem} onPress={onPress}>
     <Icon name={icon} size={28} color={COLORS.secondary} />
     <View style={styles.contactTextContainer}>
@@ -118,10 +122,10 @@ const ContactItem: React.FC<{icon: string, title: string, number: string, onPres
   </TouchableOpacity>
 );
 
-const FirstAidStep: React.FC<{icon: string, number: string, text: string}> = ({ icon, number, text }) => (
+const FirstAidStep: React.FC<{ icon: string, number: string, text: string }> = ({ icon, number, text }) => (
   <View style={styles.firstAidStep}>
     <View style={styles.stepNumberContainer}>
-        <Text style={styles.stepNumber}>{number}</Text>
+      <Text style={styles.stepNumber}>{number}</Text>
     </View>
     <Icon name={icon} size={28} color={COLORS.primary} style={styles.stepIcon} />
     <Text style={styles.stepText}>{text}</Text>
@@ -154,7 +158,12 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: 20,
+    paddingBottom: 40, // Add extra padding
+    flexGrow: 1,
   },
   sectionTitle: {
     fontSize: 22,
@@ -168,7 +177,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 25,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 3,
@@ -210,11 +219,11 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   stepNumber: {
-      color: COLORS.white,
-      fontWeight: 'bold',
+    color: COLORS.white,
+    fontWeight: 'bold',
   },
   stepIcon: {
-      marginRight: 15,
+    marginRight: 15,
   },
   stepText: {
     flex: 1,
