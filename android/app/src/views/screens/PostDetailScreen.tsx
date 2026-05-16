@@ -36,14 +36,17 @@ const PostDetailScreen = () => {
   const { post } = route.params;
   const { user, token } = useContext(AuthContext);
   
+  const [currentPost, setCurrentPost] = useState(post);
   const [comments, setComments] = useState<any[]>(post.comments || []);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<any>(null);
+  const [editingComment, setEditingComment] = useState<any>(null);
+  const [reactionMenuVisible, setReactionMenuVisible] = useState<string | null>(null);
 
   const resolveUrl = (path: string) => {
     if (!path) return null;
     if (path.startsWith('http')) {
-      // Fix localhost issue for Android emulator
       if (Platform.OS === 'android' && path.includes('localhost')) {
         return path.replace('localhost', '10.0.2.2');
       }
@@ -54,8 +57,69 @@ const PostDetailScreen = () => {
     return `${baseUrl}${cleanPath}`;
   };
 
-  const imageUrl = resolveUrl(post.photoUrl);
-  const authorAvatarUrl = resolveUrl(post.authorAvatar);
+  const imageUrl = resolveUrl(currentPost.photoUrl);
+  const authorAvatarUrl = resolveUrl(currentPost.authorAvatar);
+
+  const handleLikePost = async () => {
+    if (!token || !user) {
+      Alert.alert('Login Required', 'Please log in to like posts.');
+      return;
+    }
+    try {
+      const response = await axios.post(`${API_URL}/posts/${currentPost._id}/like`, { 
+        userId: user.uid || user._id 
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCurrentPost(response.data);
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  const handleReaction = async (commentId: string, type: string) => {
+    if (!token || !user) return;
+    try {
+      const response = await axios.post(`${API_URL}/posts/${currentPost._id}/comments/${commentId}/like`, {
+        userId: user.uid || user._id,
+        type: type // The backend might need to be updated to handle specific types, but using 'like' for now as placeholder
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data) {
+        setComments(comments.map(c => c._id === commentId ? { ...c, ...response.data } : c));
+        setReactionMenuVisible(null);
+      }
+    } catch (error) {
+      console.error('Error reacting to comment:', error);
+    }
+    setReactionMenuVisible(null);
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    Alert.alert(
+      "Delete Comment",
+      "Are you sure you want to remove this comment?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axios.delete(`${API_URL}/posts/${currentPost._id}/comments/${commentId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              setComments(comments.filter(c => c._id !== commentId));
+            } catch (err) {
+              Alert.alert("Error", "Failed to delete comment");
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
@@ -66,23 +130,130 @@ const PostDetailScreen = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/posts/${post._id}/comments`, {
-        authorId: user.uid,
-        authorName: user.displayName || user.name || 'Anonymous',
-        authorAvatar: user.photoURL || '',
-        text: commentText
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (editingComment) {
+        const res = await axios.put(`${API_URL}/posts/${currentPost._id}/comments/${editingComment._id}`, {
+          text: commentText
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        // Use the full updated comment from the server response to catch isEdited: true
+        setComments(comments.map(c => c._id === editingComment._id ? { ...c, ...res.data } : c));
+        setEditingComment(null);
+      } else {
+        const payload = {
+          authorId: user.uid,
+          authorName: user.displayName || user.name || 'Anonymous',
+          authorAvatar: user.photoURL || '',
+          text: commentText,
+          parentId: replyingTo?._id || null
+        };
 
-      setComments([...comments, response.data]);
+        const response = await axios.post(`${API_URL}/posts/${currentPost._id}/comments`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setComments([...comments, response.data]);
+        setReplyingTo(null);
+      }
       setCommentText('');
     } catch (error) {
-      console.error('Error adding comment:', error);
-      Alert.alert('Error', 'Failed to add comment.');
+      console.error('Error processing comment:', error);
+      Alert.alert('Error', 'Failed to submit comment.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderComment = (comment: any, isReply = false) => {
+    const commentAvatar = resolveUrl(comment.authorAvatar);
+    const isLiked = comment.likedBy?.includes(user?.uid || user?._id);
+    const childReplies = comments.filter(c => c.parentId === comment._id);
+    const isAuthor = user && (comment.authorId === user.uid || comment.authorId === user._id);
+    const isOP = comment.authorId === currentPost.authorId;
+    const isMedical = comment.authorRole === 'medical_officer' || comment.authorRole === 'medical-officer';
+
+    return (
+      <View key={comment._id} style={[styles.commentCard, isReply && styles.replyCard]}>
+        {reactionMenuVisible === comment._id && (
+          <View style={styles.reactionMenu}>
+            {['👍', '❤️', '😂', '😮', '😢', '😡'].map(emoji => (
+              <TouchableOpacity key={emoji} onPress={() => handleReaction(comment._id, emoji)} style={styles.emojiBtn}>
+                <Text style={styles.emojiText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        <View style={styles.commentHeader}>
+          <View style={styles.commentAvatar}>
+            {commentAvatar ? (
+              <Image source={{ uri: commentAvatar }} style={styles.commentAvatarImage} />
+            ) : (
+              <Text style={styles.commentAvatarText}>{comment.authorName?.charAt(0)}</Text>
+            )}
+          </View>
+          <View style={styles.commentInfo}>
+            <View style={styles.commentNameRow}>
+              <View style={styles.authorBadgeRow}>
+                <Text style={styles.commentAuthor}>{comment.authorName}</Text>
+                {isOP && <View style={styles.opBadge}><Text style={styles.opBadgeText}>OP</Text></View>}
+                {isMedical && (
+                  <View style={styles.medicalBadge}>
+                    <Icon name="medkit" size={8} color="#15803D" />
+                    <Text style={styles.medicalBadgeText}>MEDICAL EXPERT</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.commentHeaderRight}>
+                <View style={styles.dateRow}>
+                  <Text style={styles.commentDate}>{new Date(comment.createdAt).toLocaleDateString()}</Text>
+                  {comment.isEdited && <Text style={styles.editedLabel}> (Edited)</Text>}
+                </View>
+                {isAuthor && (
+                  <View style={styles.authorActions}>
+                    <TouchableOpacity onPress={() => {
+                      setEditingComment(comment);
+                      setCommentText(comment.text);
+                    }}>
+                      <Icon name="create-outline" size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteComment(comment._id)} style={{marginLeft: 10}}>
+                      <Icon name="trash-outline" size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+            <Text style={styles.commentText}>{comment.text}</Text>
+            
+            <View style={styles.commentActions}>
+              <TouchableOpacity 
+                style={styles.commentActionBtn} 
+                onPress={() => handleReaction(comment._id, 'like')}
+                onLongPress={() => setReactionMenuVisible(comment._id)}
+              >
+                <Icon name={isLiked ? "heart" : "heart-outline"} size={16} color={isLiked ? "#EF4444" : COLORS.mediumText} />
+                <Text style={[styles.commentActionText, isLiked && { color: "#EF4444" }]}>
+                  {comment.likes || 0}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.commentActionBtn}
+                onPress={() => setReplyingTo(comment)}
+              >
+                <Icon name="arrow-undo-outline" size={16} color={COLORS.mediumText} />
+                <Text style={styles.commentActionText}>Reply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        {childReplies.length > 0 && (
+          <View style={styles.nestedReplies}>
+            {childReplies.map(reply => renderComment(reply, true))}
+          </View>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -107,47 +278,48 @@ const PostDetailScreen = () => {
                 {authorAvatarUrl ? (
                   <Image source={{ uri: authorAvatarUrl }} style={styles.avatarImage} />
                 ) : (
-                  <Text style={styles.avatarText}>{post.authorName?.charAt(0)}</Text>
+                  <Text style={styles.avatarText}>{currentPost.authorName?.charAt(0)}</Text>
                 )}
               </View>
               <View>
-                <Text style={styles.authorName}>{post.authorName}</Text>
-                <Text style={styles.postDate}>{new Date(post.createdAt).toLocaleDateString()}</Text>
+                <Text style={styles.authorName}>{currentPost.authorName}</Text>
+                <Text style={styles.postDate}>{new Date(currentPost.createdAt).toLocaleDateString()}</Text>
               </View>
             </View>
 
-            <Text style={styles.animalTitle}>{post.animalName}</Text>
-            <Text style={styles.experience}>{post.experience}</Text>
+            <Text style={styles.animalTitle}>{currentPost.animalName}</Text>
+            <Text style={styles.experience}>{currentPost.experience}</Text>
 
             {imageUrl && (
               <Image source={{ uri: imageUrl }} style={styles.postImage} resizeMode="cover" />
             )}
+
+            <View style={styles.postActionBar}>
+              <TouchableOpacity style={styles.postActionButton} onPress={handleLikePost}>
+                <Icon 
+                  name={currentPost.likedBy?.includes(user?.uid || user?._id) ? "heart" : "heart-outline"} 
+                  size={22} 
+                  color={currentPost.likedBy?.includes(user?.uid || user?._id) ? "#EF4444" : COLORS.mediumText} 
+                />
+                <Text style={[styles.postActionText, currentPost.likedBy?.includes(user?.uid || user?._id) && { color: "#EF4444" }]}>
+                  {currentPost.likes || 0}
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.postActionButton}>
+                <Icon name="chatbubble-outline" size={20} color={COLORS.mediumText} />
+                <Text style={styles.postActionText}>{comments.length}</Text>
+              </View>
+              <TouchableOpacity style={styles.postActionButton}>
+                <Icon name="share-social-outline" size={20} color={COLORS.mediumText} />
+                <Text style={styles.postActionText}>Share</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Comments Section */}
           <View style={styles.commentsSection}>
             <Text style={styles.sectionTitle}>Comments ({comments.length})</Text>
-            {comments.map((comment, index) => {
-              const commentAvatar = resolveUrl(comment.authorAvatar);
-              return (
-                <View key={comment._id || index} style={styles.commentCard}>
-                  <View style={styles.commentHeader}>
-                    <View style={styles.commentAvatar}>
-                      {commentAvatar ? (
-                        <Image source={{ uri: commentAvatar }} style={styles.commentAvatarImage} />
-                      ) : (
-                        <Text style={styles.commentAvatarText}>{comment.authorName?.charAt(0)}</Text>
-                      )}
-                    </View>
-                    <View style={styles.commentInfo}>
-                      <Text style={styles.commentAuthor}>{comment.authorName}</Text>
-                      <Text style={styles.commentDate}>{new Date(comment.createdAt).toLocaleDateString()}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.commentText}>{comment.text}</Text>
-                </View>
-              );
-            })}
+            {comments.filter(c => !c.parentId).map(comment => renderComment(comment))}
             {comments.length === 0 && (
               <View style={styles.emptyComments}>
                 <Icon name="chatbubble-outline" size={48} color={COLORS.lightText} />
@@ -159,10 +331,21 @@ const PostDetailScreen = () => {
 
         {/* Add Comment Input */}
         <View style={styles.inputWrapper}>
+          {(replyingTo || editingComment) && (
+            <View style={styles.replyingBar}>
+              <Text style={styles.replyingText}>
+                {editingComment ? 'Editing comment...' : `Replying to `}
+                <Text style={{fontWeight: '700'}}>{editingComment ? '' : replyingTo.authorName}</Text>
+              </Text>
+              <TouchableOpacity onPress={() => { setReplyingTo(null); setEditingComment(null); if(editingComment) setCommentText(''); }}>
+                <Icon name="close-circle" size={20} color={COLORS.lightText} />
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Add a comment..."
+              placeholder={editingComment ? "Update your comment..." : (replyingTo ? "Add a reply..." : "Add a comment...")}
               placeholderTextColor={COLORS.lightText}
               value={commentText}
               onChangeText={setCommentText}
@@ -296,6 +479,97 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  replyCard: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    marginTop: 8,
+    marginBottom: 0,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary + '40',
+  },
+  nestedReplies: {
+    marginTop: 10,
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.border,
+  },
+  authorBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  opBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  opBadgeText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: '#15803D',
+  },
+  medicalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  medicalBadgeText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: '#15803D',
+    marginLeft: 4,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editedLabel: {
+    fontSize: 10,
+    color: COLORS.lightText,
+    fontStyle: 'italic',
+  },
+  commentHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  authorActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.border,
+  },
+  reactionMenu: {
+    position: 'absolute',
+    top: -50,
+    left: 20,
+    backgroundColor: COLORS.surface,
+    flexDirection: 'row',
+    padding: 8,
+    borderRadius: 30,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    zIndex: 1000,
+  },
+  emojiBtn: {
+    paddingHorizontal: 8,
+  },
+  emojiText: {
+    fontSize: 24,
+  },
   commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,34 +601,79 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.darkText,
+    marginBottom: 2,
   },
   commentDate: {
     fontSize: 10,
     color: COLORS.lightText,
   },
+  commentNameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   commentText: {
     fontSize: 14,
     color: COLORS.mediumText,
     lineHeight: 20,
-    paddingLeft: 42,
+    marginBottom: 8,
   },
-  emptyComments: {
+  commentActions: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
+    marginTop: 4,
   },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.lightText,
-    textAlign: 'center',
+  commentActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+    paddingVertical: 4,
+  },
+  commentActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.mediumText,
+    marginLeft: 4,
+  },
+  postActionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
     marginTop: 15,
-    paddingHorizontal: 40,
+  },
+  postActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24,
+  },
+  postActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.mediumText,
+    marginLeft: 8,
   },
   inputWrapper: {
     padding: 15,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+  },
+  replyingBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  replyingText: {
+    fontSize: 12,
+    color: COLORS.mediumText,
   },
   inputContainer: {
     flexDirection: 'row',
