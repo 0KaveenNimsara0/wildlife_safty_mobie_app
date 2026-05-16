@@ -55,12 +55,12 @@ const ProfileScreen = () => {
               />
             ) : (
               <Text style={styles.avatarText}>
-                {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
+                {(user.displayName || user.name || 'U').charAt(0).toUpperCase()}
               </Text>
             )}
           </View>
           
-          <Text style={styles.name}>{user.displayName || 'Unknown User'}</Text>
+          <Text style={styles.name}>{user.displayName || user.name || 'Unknown User'}</Text>
           <Text style={styles.email}>{user.email}</Text>
           
           <View style={styles.badgeContainer}>
@@ -86,7 +86,7 @@ const ProfileScreen = () => {
             <Icon name="person-outline" size={20} color={COLORS.mediumText} style={styles.infoIcon} />
             <View>
               <Text style={styles.infoLabel}>User ID</Text>
-              <Text style={styles.infoValue}>{user.uid}</Text>
+              <Text style={styles.infoValue}>{user.uid || user._id}</Text>
             </View>
           </View>
 

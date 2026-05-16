@@ -30,6 +30,7 @@ const COLORS = {
 };
 
 const CATEGORIES = [
+  { id: 'all', label: 'All', icon: 'grid-outline' },
   { id: 'wildlife_safety', label: 'Safety', icon: 'shield-checkmark' },
   { id: 'medical_advice', label: 'Medical', icon: 'medkit' },
   { id: 'emergency_response', label: 'Emergency', icon: 'alert-circle' },
@@ -77,7 +78,7 @@ const ArticlesScreen = () => {
     return (
       <TouchableOpacity 
         style={styles.articleCard}
-        onPress={() => Alert.alert(item.title, 'Full article reading is coming soon!')}
+        onPress={() => navigation.navigate('ArticleDetail', { article: item })}
       >
         {imageUrl && (
           <Image source={{ uri: imageUrl }} style={styles.articleImage} />
@@ -104,7 +105,14 @@ const ArticlesScreen = () => {
           <Icon name="arrow-back" size={24} color={COLORS.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Knowledge Center</Text>
-        <View style={{ width: 44 }} />
+        {role === 'medical-officer' ? (
+          <TouchableOpacity onPress={() => navigation.navigate('MyArticles')} style={styles.myArticlesPill}>
+            <Icon name="document-text" size={16} color={COLORS.white} />
+            <Text style={styles.myArticlesPillText}>My Articles</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
       </View>
 
       <View style={styles.categoryContainer}>
@@ -170,6 +178,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.darkText,
+  },
+  myArticlesPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  myArticlesPillText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 4,
   },
   categoryContainer: {
     backgroundColor: COLORS.surface,

@@ -42,7 +42,11 @@ const NotificationsScreen = () => {
       const response = await axios.get(`${API_URL}/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNotifications(response.data);
+      if (response.data.success && Array.isArray(response.data.notifications)) {
+        setNotifications(response.data.notifications);
+      } else if (Array.isArray(response.data)) {
+        setNotifications(response.data);
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
