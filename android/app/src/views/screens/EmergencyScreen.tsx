@@ -13,12 +13,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
 
 const COLORS = {
-  primary: '#c0392b', // Red for emergency
-  secondary: '#2E7D32', // Green from your theme
-  background: '#F9F9F9',
+  primary: '#DC2626', // Red 600 for emergency emphasis
+  secondary: '#15803D', // Forest Green for secondary actions
+  background: '#F8FAFC', // Slate 50
   white: '#FFFFFF',
-  darkText: '#1B2021',
-  lightText: '#5F7A61',
+  darkText: '#0F172A', // Slate 900
+  lightText: '#64748B', // Slate 500
+  border: '#E2E8F0', // Slate 200
 };
 
 const EmergencyScreen: React.FC<{ navigation?: any; onClose?: () => void }> = ({ navigation, onClose }) => {
@@ -145,7 +146,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
   },
   headerTitle: {
     color: COLORS.darkText,
@@ -166,21 +172,22 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: COLORS.darkText,
     marginBottom: 15,
+    letterSpacing: 0.5,
   },
   card: {
     backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 10,
+    borderRadius: 20,
+    padding: 15,
     marginBottom: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
   },
   contactItem: {
     flexDirection: 'row',
@@ -188,7 +195,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.border,
   },
   contactTextContainer: {
     flex: 1,

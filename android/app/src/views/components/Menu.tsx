@@ -3,6 +3,19 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
+// --- Enhanced Color Palette ---
+const COLORS = {
+  primary: '#15803D', // Forest Green
+  background: '#F8FAFC', // Slate 50
+  surface: '#FFFFFF',
+  white: '#FFFFFF',
+  darkText: '#0F172A', // Slate 900
+  mediumText: '#475569', // Slate 600
+  lightText: '#64748B', // Slate 500
+  border: '#E2E8F0', // Slate 200
+  overlay: 'rgba(15, 23, 42, 0.4)',
+};
+
 interface MenuProps {
   visible: boolean;
   onClose: () => void;
@@ -25,7 +38,7 @@ const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
             <View style={styles.menuHeader}>
               <Text style={styles.menuTitle}>Menu</Text>
               <TouchableOpacity style={styles.closeIconContainer} onPress={onClose}>
-                <Icon name="close-outline" size={32} color="#333" />
+                <Icon name="close-outline" size={32} color={COLORS.darkText} />
               </TouchableOpacity>
             </View>
 
@@ -51,7 +64,7 @@ const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
 const MenuItem: React.FC<{icon: string, text: string, onPress: () => void}> = ({ icon, text, onPress }) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       {/* --- Updated Icon Color --- */}
-      <Icon name={icon} size={24} color="#2E7D32" style={styles.menuItemIcon} />
+      <Icon name={icon} size={24} color={COLORS.primary} style={styles.menuItemIcon} />
       <Text style={styles.menuItemText}>{text}</Text>
     </TouchableOpacity>
 );
@@ -59,17 +72,17 @@ const MenuItem: React.FC<{icon: string, text: string, onPress: () => void}> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.overlay,
   },
   menuContainer: {
     width: '80%',
     height: '100%',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.background,
     shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   safeArea: {
     flex: 1,
@@ -78,15 +91,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: COLORS.border,
   },
   menuTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#2c3e50',
+    fontWeight: '800',
+    color: COLORS.darkText,
+    letterSpacing: 0.5,
   },
   closeIconContainer: {
     padding: 5,
@@ -104,20 +118,21 @@ const styles = StyleSheet.create({
     marginRight: 20,
   },
   menuItemText: {
-    fontSize: 18,
-    color: '#34495e',
-    fontWeight: '500',
+    fontSize: 17,
+    color: COLORS.darkText,
+    fontWeight: '600',
   },
   footer: {
     marginTop: 'auto',
-    padding: 20,
+    padding: 24,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: COLORS.border,
     alignItems: 'center',
   },
   footerText: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: COLORS.lightText,
+    fontWeight: '500',
   }
 });
 

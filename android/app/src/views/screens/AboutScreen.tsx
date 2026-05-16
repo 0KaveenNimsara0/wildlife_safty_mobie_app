@@ -5,13 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as Animatable from 'react-native-animatable';
 
-// --- App Colors ---
+// --- Enhanced Color Palette ---
 const COLORS = {
-  primary: '#3498db',
-  background: '#ecf0f1',
-  white: '#ffffff',
-  darkText: '#2c3e50',
-  lightText: '#7f8c8d',
+  primary: '#15803D', // Forest Green
+  background: '#F8FAFC', // Slate 50
+  surface: '#FFFFFF',
+  white: '#FFFFFF',
+  darkText: '#0F172A', // Slate 900
+  lightText: '#64748B', // Slate 500
+  border: '#E2E8F0', // Slate 200
 };
 
 interface AboutScreenProps {
@@ -99,12 +101,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#dfe6e9',
+    borderBottomColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
   },
   headerTitle: {
     color: COLORS.darkText,
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 20,
+    letterSpacing: 0.5,
   },
   closeButton: {
     padding: 5,
@@ -120,11 +128,11 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 20,
     backgroundColor: COLORS.white,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    borderRadius: 24,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 10,
     elevation: 5,
   },
   cardContent: {
@@ -146,9 +154,14 @@ const styles = StyleSheet.create({
   contactButton: {
     marginTop: 20,
     backgroundColor: COLORS.primary,
-    borderRadius: 30,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingVertical: 14,
     paddingHorizontal: 30,
+    shadowColor: COLORS.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   contactButtonText: {
     color: COLORS.white,

@@ -21,6 +21,7 @@ import {NativeModules} from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
 import HapticFeedback from 'react-native-haptic-feedback';
+import LinearGradient from 'react-native-linear-gradient';
 
 // Import controllers
 import {ImageController} from '../../controllers/ImageController';
@@ -97,32 +98,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     hapticTrigger();
   };
 
-  const handleSelectionModeChange = (mode: 'camera' | 'gallery') => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setSelectionMode(mode);
-    hapticTrigger();
+  const handleImageCapture = () => {
+    ImageController.captureImage((asset) => {
+      if (asset) {
+        setImage(asset);
+        setResultData(null);
+        setError(null);
+        hapticTrigger();
+      }
+    });
   };
 
-  const handleImageSelection = () => {
-    if (selectionMode === 'camera') {
-      ImageController.captureImage((asset) => {
-        if (asset) {
-          setImage(asset);
-          setResultData(null);
-          setError(null);
-          hapticTrigger();
-        }
-      });
-    } else {
-      ImageController.pickImage((asset) => {
-        if (asset) {
-          setImage(asset);
-          setResultData(null);
-          setError(null);
-          hapticTrigger();
-        }
-      });
-    }
+  const handleGallerySelection = () => {
+    ImageController.pickImage((asset) => {
+      if (asset) {
+        setImage(asset);
+        setResultData(null);
+        setError(null);
+        hapticTrigger();
+      }
+    });
   };
 
   const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency') => {
@@ -183,158 +178,116 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         contentContainerStyle={styles.scrollView}
         showsVerticalScrollIndicator={false}>
 
-        {/* Hero Section */}
-        <Animatable.View animation="fadeInDown" duration={800} delay={200} style={styles.heroSection}>
-          <View style={styles.heroContent}>
-            <Icon name="leaf-outline" size={32} color={COLORS.primary} style={styles.heroIcon} />
-            <Text style={styles.heroTitle}>Identify Wildlife Safely</Text>
-            <Text style={styles.heroSubtitle}>
-              Get instant identification and safety information for animals you encounter
-            </Text>
-          </View>
-
-          {/* Mode Selector Card */}
-          <View style={styles.modeCard}>
-            <View style={styles.modeHeader}>
-              <Icon name="settings-outline" size={20} color={COLORS.primary} />
-              <Text style={styles.modeCardTitle}>Detection Mode</Text>
+        {/* Action Centric Main Screen (When no image is selected) */}
+        {!image ? (
+          <Animatable.View animation="fadeIn" duration={800} style={styles.actionContainer}>
+            <View style={styles.welcomeSection}>
+              <Text style={styles.welcomeTitle}>Identify Wildlife</Text>
+              <Text style={styles.welcomeSubtitle}>What do you see right now?</Text>
             </View>
 
-            <View style={styles.modeSelector}>
-              <View style={styles.modeOption}>
-                <Icon name="flash-off-outline" size={16} color={!isOnlineMode ? COLORS.primary : COLORS.lightText} />
-                <Text style={[styles.modeText, !isOnlineMode && styles.modeTextActive]}>
-                  Offline
-                </Text>
-              </View>
-
+            {/* Subtle Online/Offline Switch */}
+            <View style={styles.compactModeToggle}>
+              <Text style={[styles.compactModeText, !isOnlineMode && styles.compactModeTextActive]}>Offline</Text>
               <Switch
                 trackColor={{false: COLORS.switchTrack, true: COLORS.switchTrackActive}}
                 thumbColor={isOnlineMode ? COLORS.primary : COLORS.switchThumb}
                 onValueChange={handleModeChange}
                 value={isOnlineMode}
-                style={styles.switch}
+                style={styles.compactSwitch}
               />
-
-              <View style={styles.modeOption}>
-                <Icon name="wifi-outline" size={16} color={isOnlineMode ? COLORS.primary : COLORS.lightText} />
-                <Text style={[styles.modeText, isOnlineMode && styles.modeTextActive]}>
-                  Online
-                </Text>
-              </View>
+              <Text style={[styles.compactModeText, isOnlineMode && styles.compactModeTextActive]}>Online</Text>
             </View>
 
-            <Text style={styles.modeDescription}>
-              {isOnlineMode
-                ? 'Enhanced accuracy with detailed server analysis'
-                : 'Quick on-device identification without internet'}
-            </Text>
-          </View>
-        </Animatable.View>
-
-        {/* Image Selection Section */}
-        <Animatable.View
-          animation="fadeIn"
-          duration={800}
-          delay={400}
-          style={styles.selectionSection}>
-
-          <Text style={styles.sectionTitle}>Choose Image Source</Text>
-
-          <View style={styles.selectionTabs}>
-            <TouchableOpacity
-              style={[styles.tabButton, selectionMode === 'camera' && styles.tabButtonActive]}
-              onPress={() => handleSelectionModeChange('camera')}
-              activeOpacity={0.8}>
-              <Icon
-                name="camera"
-                size={22}
-                color={selectionMode === 'camera' ? COLORS.white : COLORS.primary}
-              />
-              <Text style={[styles.tabText, selectionMode === 'camera' && styles.tabTextActive]}>
-                Camera
-              </Text>
+            {/* Massive Camera Button */}
+            <TouchableOpacity 
+               style={styles.massiveCameraButton}
+               onPress={handleImageCapture}
+               activeOpacity={0.9}
+            >
+               <LinearGradient
+                 colors={['#16A34A', '#15803D']}
+                 style={styles.massiveCameraGradient}
+                 start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
+                 <Icon name="camera" size={64} color={COLORS.white} />
+                 <Text style={styles.massiveCameraText}>Take Photo</Text>
+               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.tabButton, selectionMode === 'gallery' && styles.tabButtonActive]}
-              onPress={() => handleSelectionModeChange('gallery')}
-              activeOpacity={0.8}>
-              <Icon
-                name="images"
-                size={22}
-                color={selectionMode === 'gallery' ? COLORS.white : COLORS.primary}
-              />
-              <Text style={[styles.tabText, selectionMode === 'gallery' && styles.tabTextActive]}>
-                Gallery
-              </Text>
+            {/* Secondary Gallery Button */}
+            <TouchableOpacity 
+               style={styles.galleryButton}
+               onPress={handleGallerySelection}
+               activeOpacity={0.7}
+            >
+               <Icon name="images" size={24} color={COLORS.primary} style={{marginRight: 10}} />
+               <Text style={styles.galleryButtonText}>Upload from Gallery</Text>
             </TouchableOpacity>
-          </View>
 
-          {/* Image Container */}
-          <TouchableOpacity
-            style={styles.imageContainer}
-            onPress={handleImageSelection}
-            activeOpacity={0.9}>
-            {image ? (
+            {/* Quick Access Cards */}
+            <View style={styles.quickAccessRow}>
+              <TouchableOpacity style={styles.quickCard} onPress={() => setEmergencyVisible(true)}>
+                <View style={styles.quickCardIconBgError}>
+                  <Icon name="warning" size={24} color={COLORS.error} />
+                </View>
+                <Text style={styles.quickCardText}>Emergency</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.quickCard} onPress={() => setDirectoryVisible(true)}>
+                <View style={styles.quickCardIconBgPrimary}>
+                  <Icon name="book" size={24} color={COLORS.primary} />
+                </View>
+                <Text style={styles.quickCardText}>Directory</Text>
+              </TouchableOpacity>
+            </View>
+          </Animatable.View>
+        ) : (
+          <Animatable.View animation="fadeIn" duration={600} style={styles.imageReviewContainer}>
+            <View style={styles.imageReviewHeader}>
+               <Text style={styles.sectionTitle}>Review Image</Text>
+               <TouchableOpacity onPress={() => setImage(null)} style={styles.cancelButton}>
+                 <Icon name="close" size={24} color={COLORS.darkText} />
+               </TouchableOpacity>
+            </View>
+
+            <View style={styles.imageContainer}>
               <View style={styles.imageWrapper}>
                 <Image source={{uri: image.uri}} style={styles.image} />
                 <View style={styles.imageOverlay}>
                   <TouchableOpacity
                     style={styles.changeImageButton}
-                    onPress={handleImageSelection}>
-                    <Icon name="refresh" size={20} color={COLORS.white} />
+                    onPress={handleGallerySelection}>
+                    <Icon name="refresh" size={20} color={COLORS.darkText} />
                     <Text style={styles.changeImageText}>Change Image</Text>
                   </TouchableOpacity>
                 </View>
               </View>
-            ) : (
-              <View style={styles.placeholderContainer}>
-                <View style={styles.placeholderIconContainer}>
-                  <Icon
-                    name={selectionMode === 'camera' ? 'camera' : 'images'}
-                    size={48}
-                    color={COLORS.primary}
-                  />
-                </View>
-                <Text style={styles.placeholderTitle}>
-                  {selectionMode === 'camera'
-                    ? 'Take a Photo'
-                    : 'Select from Gallery'}
-                </Text>
-                <Text style={styles.placeholderSubtitle}>
-                  {selectionMode === 'camera'
-                    ? 'Capture an animal photo for identification'
-                    : 'Choose an image from your photo library'}
-                </Text>
-                <View style={styles.placeholderButton}>
-                  <Text style={styles.placeholderButtonText}>Tap to {selectionMode === 'camera' ? 'Capture' : 'Browse'}</Text>
-                </View>
-              </View>
-            )}
-          </TouchableOpacity>
-        </Animatable.View>
+            </View>
 
-        {/* Identify Button */}
-        {image && (
-          <Animatable.View animation="fadeInUp" duration={600} delay={100} style={styles.identifySection}>
-            <TouchableOpacity
-              style={[styles.identifyButton, loading && styles.identifyButtonDisabled]}
-              onPress={identifyAnimal}
-              disabled={loading}
-              activeOpacity={0.8}>
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                  <Text style={styles.loadingText}>Analyzing...</Text>
-                </View>
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Icon name="search" size={22} color={COLORS.white} />
-                  <Text style={styles.identifyButtonText}>Identify Animal</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            <Animatable.View animation="fadeInUp" duration={600} delay={100} style={styles.identifySection}>
+              <TouchableOpacity
+                onPress={identifyAnimal}
+                disabled={loading}
+                activeOpacity={0.8}>
+                <LinearGradient
+                  colors={loading ? ['#86EFAC', '#4ADE80'] : ['#16A34A', '#15803D']}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}
+                  style={[styles.identifyButton, loading && styles.identifyButtonDisabled]}>
+                  {loading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color={COLORS.white} />
+                      <Text style={styles.loadingText}>Analyzing...</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.buttonContent}>
+                      <Icon name="search" size={24} color={COLORS.white} />
+                      <Text style={styles.identifyButtonText}>Identify Animal</Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animatable.View>
           </Animatable.View>
         )}
 
@@ -484,26 +437,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 
 // --- Enhanced Color Palette ---
 const COLORS = {
-  primary: '#2E7D32',
-  secondary: '#4CAF50',
-  background: '#FAFAFA',
+  primary: '#15803D', // Deep Forest Green (easier on the eyes)
+  secondary: '#166534', 
+  background: '#F8FAFC', // Slate 50
   surface: '#FFFFFF',
-  surfaceVariant: '#F8F9FA',
+  surfaceVariant: '#F1F5F9', // Slate 100
   white: '#FFFFFF',
-  darkText: '#212121',
-  mediumText: '#424242',
-  lightText: '#757575',
-  error: '#D32F2F',
-  success: '#388E3C',
-  warning: '#F57C00',
-  info: '#1976D2',
-  accent: '#7B1FA2',
-  border: '#E0E0E0',
-  borderLight: '#F0F0F0',
-  switchTrack: '#E0E0E0',
-  switchTrackActive: '#A5D6A7',
-  switchThumb: '#FAFAFA',
-  overlay: 'rgba(0, 0, 0, 0.3)',
+  darkText: '#0F172A', // Slate 900
+  mediumText: '#475569', // Slate 600
+  lightText: '#94A3B8', // Slate 400
+  error: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+  accent: '#8B5CF6',
+  border: '#E2E8F0', // Slate 200
+  borderLight: '#F1F5F9',
+  switchTrack: '#E2E8F0',
+  switchTrackActive: '#A7F3D0', // Emerald 200
+  switchThumb: '#FFFFFF',
+  overlay: 'rgba(15, 23, 42, 0.4)',
 };
 
 const styles = StyleSheet.create({
@@ -514,144 +467,162 @@ const styles = StyleSheet.create({
   scrollView: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+    flexGrow: 1,
   },
 
-  // Hero Section
-  heroSection: {
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  heroContent: {
+  // Action Container
+  actionContainer: {
+    flex: 1,
+    paddingTop: 20,
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'space-evenly',
+    width: '100%',
   },
-  heroIcon: {
-    marginBottom: 12,
+  welcomeSection: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  heroTitle: {
+  welcomeTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: COLORS.darkText,
-    textAlign: 'center',
-    marginBottom: 8,
+    letterSpacing: 0.5,
   },
-  heroSubtitle: {
+  welcomeSubtitle: {
     fontSize: 16,
     color: COLORS.mediumText,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 20,
+    marginTop: 4,
   },
-
-  // Mode Card
-  modeCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 20,
+  compactModeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceVariant,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 30,
+  },
+  compactModeText: {
+    fontSize: 14,
+    color: COLORS.lightText,
+    fontWeight: '600',
+  },
+  compactModeTextActive: {
+    color: COLORS.primary,
+  },
+  compactSwitch: {
+    marginHorizontal: 10,
+    transform: [{scaleX: 0.9}, {scaleY: 0.9}],
+  },
+  massiveCameraButton: {
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    shadowColor: COLORS.primary,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  massiveCameraGradient: {
+    flex: 1,
+    borderRadius: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  massiveCameraText: {
+    color: COLORS.white,
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 12,
+    letterSpacing: 0.5,
+  },
+  galleryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    borderRadius: 30,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
-  modeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modeCardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  galleryButtonText: {
     color: COLORS.darkText,
-    marginLeft: 8,
-  },
-  modeSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  modeOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  modeText: {
     fontSize: 16,
-    marginLeft: 8,
-    color: COLORS.lightText,
-    fontWeight: '500',
+    fontWeight: '700',
   },
-  modeTextActive: {
-    fontWeight: '600',
-    color: COLORS.primary,
+  quickAccessRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  switch: {
-    transform: [{scaleX: 1.1}, {scaleY: 1.1}],
-    marginHorizontal: 20,
+  quickCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderRadius: 16,
+    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  modeDescription: {
-    fontSize: 14,
-    color: COLORS.mediumText,
-    textAlign: 'center',
-    lineHeight: 20,
+  quickCardIconBgError: {
+    backgroundColor: '#FEF2F2',
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  quickCardIconBgPrimary: {
+    backgroundColor: '#ECFDF5',
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  quickCardText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.darkText,
   },
 
-  // Selection Section
-  selectionSection: {
-    marginBottom: 30,
+  // Image Review Section
+  imageReviewContainer: {
+    width: '100%',
+  },
+  imageReviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: COLORS.darkText,
-    marginBottom: 16,
-    textAlign: 'center',
   },
-  selectionTabs: {
-    flexDirection: 'row',
+  cancelButton: {
+    padding: 6,
     backgroundColor: COLORS.surfaceVariant,
     borderRadius: 16,
-    padding: 4,
-    marginBottom: 24,
   },
-  tabButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-  },
-  tabButtonActive: {
-    backgroundColor: COLORS.primary,
-    shadowColor: COLORS.primary,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginLeft: 8,
-  },
-  tabTextActive: {
-    color: COLORS.white,
-  },
-
-  // Image Container
   imageContainer: {
     width: '100%',
-    height: 280,
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    height: 320,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    marginBottom: 24,
   },
   imageWrapper: {
     flex: 1,
@@ -664,67 +635,25 @@ const styles = StyleSheet.create({
   },
   imageOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0,
+    bottom: 16,
+    right: 16,
   },
   changeImageButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   changeImageText: {
     color: COLORS.darkText,
     marginLeft: 8,
-    fontWeight: '600',
-  },
-  placeholderContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-  placeholderIconContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: COLORS.surfaceVariant,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  placeholderTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.darkText,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  placeholderSubtitle: {
-    fontSize: 14,
-    color: COLORS.mediumText,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  placeholderButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  placeholderButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
   // Identify Section
@@ -732,20 +661,19 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   identifyButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: 18,
     paddingHorizontal: 32,
     borderRadius: 30,
     alignItems: 'center',
     shadowColor: COLORS.primary,
     shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     elevation: 8,
   },
   identifyButtonDisabled: {
-    backgroundColor: COLORS.lightText,
     shadowOpacity: 0.1,
+    elevation: 2,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -754,8 +682,9 @@ const styles = StyleSheet.create({
   identifyButtonText: {
     color: COLORS.white,
     fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '800',
+    marginLeft: 10,
+    letterSpacing: 0.5,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -765,7 +694,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 16,
     marginLeft: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
   // Error Container

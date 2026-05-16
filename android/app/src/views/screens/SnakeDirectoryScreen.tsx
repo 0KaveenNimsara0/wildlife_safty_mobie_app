@@ -17,6 +17,20 @@ import * as Animatable from 'react-native-animatable';
 import snakeData from '../assets/snakes details/sri_lanka_snakes_data.json';
 import { UnsplashService } from '../../services/UnsplashService';
 
+// --- Enhanced Color Palette ---
+const COLORS = {
+  primary: '#15803D', // Forest Green
+  background: '#F8FAFC', // Slate 50
+  surface: '#FFFFFF',
+  surfaceVariant: '#F1F5F9', // Slate 100
+  white: '#FFFFFF',
+  darkText: '#0F172A', // Slate 900
+  mediumText: '#475569', // Slate 600
+  lightText: '#64748B', // Slate 500
+  border: '#E2E8F0', // Slate 200
+  overlay: 'rgba(15, 23, 42, 0.4)',
+};
+
 // --- TypeScript Interface for our Snake Data ---
 interface Snake {
   'Family': string;
@@ -53,7 +67,7 @@ const SnakeDetailScreen: React.FC<{snake: Snake; onGoBack: () => void; images: {
     <SafeAreaView style={styles.detailContainer}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onGoBack} style={styles.backButton}>
-          <Icon name="arrow-back-outline" size={28} color="#333" />
+          <Icon name="arrow-back-outline" size={28} color={COLORS.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {snake['Common English Name(s)']}
@@ -87,7 +101,7 @@ const SnakeDetailScreen: React.FC<{snake: Snake; onGoBack: () => void; images: {
 // Reusable component for displaying a row of details
 const DetailRow: React.FC<{label: string, value: string, icon: string}> = ({ label, value, icon }) => (
     <View style={styles.detailRow}>
-        <Icon name={icon} size={24} color="#2E7D32" style={styles.detailIcon} />
+        <Icon name={icon} size={24} color={COLORS.primary} style={styles.detailIcon} />
         <View style={styles.detailTextContainer}>
             <Text style={styles.detailLabel}>{label}</Text>
             <Text style={styles.detailValue}>{value}</Text>
@@ -134,7 +148,7 @@ const SnakeListScreen: React.FC<{
       <View style={styles.header}>
         <Text style={styles.directoryTitle}>Snake Directory</Text>
         <TouchableOpacity onPress={onClose} style={styles.backButton}>
-          <Icon name="close-outline" size={32} color="#333" />
+          <Icon name="close-outline" size={32} color={COLORS.darkText} />
         </TouchableOpacity>
       </View>
       <FlatList
@@ -193,32 +207,33 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
-    backgroundColor: '#F0F4F0',
+    backgroundColor: COLORS.background,
   },
   directoryTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1B2021',
+    fontWeight: '800',
+    color: COLORS.darkText,
+    letterSpacing: 0.5,
     flex: 1,
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 15,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 12,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
   listImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#ecf0f1',
+    width: 65,
+    height: 65,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceVariant,
   },
   listItemTextContainer: {
     flex: 1,
@@ -226,35 +241,43 @@ const styles = StyleSheet.create({
   },
   listItemTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1B2021',
+    fontWeight: '700',
+    color: COLORS.darkText,
+    marginBottom: 4,
   },
   listItemSubtitle: {
-    fontSize: 12,
-    color: '#5F7A61',
+    fontSize: 13,
+    color: COLORS.lightText,
     fontStyle: 'italic',
   },
   detailContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 15,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: COLORS.darkText,
     flex: 1,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   scrollViewContent: {
     paddingBottom: 40,
@@ -262,29 +285,36 @@ const styles = StyleSheet.create({
   detailImage: {
     width: width,
     height: width * 0.75,
-    backgroundColor: '#ecf0f1',
+    backgroundColor: COLORS.surfaceVariant,
   },
   detailContent: {
     padding: 20,
   },
   detailTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#1B2021',
-    marginBottom: 5,
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.darkText,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   detailScientificName: {
     fontSize: 16,
-    color: '#5F7A61',
+    color: COLORS.primary,
     fontStyle: 'italic',
-    marginBottom: 25,
+    marginBottom: 30,
+    fontWeight: '500',
   },
   detailRow: {
     flexDirection: 'row',
     marginBottom: 20,
-    backgroundColor: '#F9FBF9',
-    padding: 15,
-    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   detailIcon: {
       marginRight: 15,
@@ -295,14 +325,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B2021',
-    marginBottom: 5,
+    fontWeight: '700',
+    color: COLORS.darkText,
+    marginBottom: 6,
   },
   detailValue: {
     fontSize: 15,
-    color: '#555',
-    lineHeight: 22,
+    color: COLORS.mediumText,
+    lineHeight: 24,
   },
 });
 

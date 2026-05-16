@@ -2,6 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
+const COLORS = {
+  primary: '#15803D', // Forest Green
+  error: '#DC2626', // Red 600
+  background: '#F8FAFC', // Slate 50
+  darkText: '#0F172A', // Slate 900
+};
+
 interface HeaderProps {
   title: string;
   onMenuPress: () => void;
@@ -18,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuPress, onEmergencyPress })
           style={styles.iconButton}
           activeOpacity={0.7}
         >
-          <Icon name="menu-outline" size={24} color="#333333" />
+          <Icon name="menu" size={28} color={COLORS.primary} />
         </TouchableOpacity>
         
         {/* Title */}
@@ -32,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuPress, onEmergencyPress })
           style={styles.iconButton}
           activeOpacity={0.7}
         >
-          <Icon name="warning-outline" size={24} color="#D32F2F" />
+          <Icon name="warning" size={26} color={COLORS.error} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -41,27 +48,20 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuPress, onEmergencyPress })
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 4,
+    backgroundColor: COLORS.background,
     zIndex: 10,
   },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: Platform.OS === 'android' ? 60 : 50,
-    paddingHorizontal: 15,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+    height: Platform.OS === 'android' ? 70 : 60,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.background,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -71,10 +71,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    letterSpacing: 0.2,
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.darkText,
+    letterSpacing: 0.5,
   },
 });
 
