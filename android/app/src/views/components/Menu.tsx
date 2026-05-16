@@ -22,7 +22,7 @@ const COLORS = {
 interface MenuProps {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community' | 'ChatList' | 'Articles' | 'Notifications' | 'Discoveries') => void;
+  onNavigate: (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community' | 'ChatList' | 'Articles' | 'Notifications' | 'Discoveries' | 'History') => void;
 }
 
 const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
@@ -89,8 +89,10 @@ const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
                 <MenuItem icon="book-outline" text="Knowledge Center" onPress={() => onNavigate('Articles')} />
                 <MenuItem icon="notifications-outline" text="Notifications" onPress={() => onNavigate('Notifications')} />
                 
-                {role === 'medical-officer' && (
+                {role === 'medical-officer' ? (
                   <MenuItem icon="eye-outline" text="Check Discoveries" onPress={() => onNavigate('Discoveries' as any)} />
+                ) : (
+                  <MenuItem icon="time-outline" text="My History" onPress={() => onNavigate('History')} />
                 )}
 
                 <MenuItem icon="list-outline" text="Snake Details" onPress={() => onNavigate('Directory')} />

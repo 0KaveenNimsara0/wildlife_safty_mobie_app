@@ -37,7 +37,7 @@ const DiscoveryDetailScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { scan } = route.params;
-  const { token, user } = useContext(AuthContext);
+  const { token, user, role } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
 
   const resolveUrl = (path: string) => {
@@ -130,7 +130,7 @@ const DiscoveryDetailScreen = () => {
             </Text>
           </View>
 
-          {scan.verificationStatus === 'pending' && (
+          {scan.verificationStatus === 'pending' && (role === 'medical-officer' || role === 'admin') && (
             <View style={styles.actionContainer}>
               <Text style={styles.actionPrompt}>As a Medical Officer, please verify this identification:</Text>
               <View style={styles.actionButtons}>

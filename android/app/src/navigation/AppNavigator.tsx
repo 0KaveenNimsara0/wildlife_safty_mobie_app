@@ -21,6 +21,7 @@ import DiscoveryDetailScreen from '../views/screens/DiscoveryDetailScreen';
 import ArticleDetailScreen from '../views/screens/ArticleDetailScreen';
 import MyArticlesScreen from '../views/screens/MyArticlesScreen';
 import CreateArticleScreen from '../views/screens/CreateArticleScreen';
+import HistoryScreen from '../views/screens/HistoryScreen';
 
 const Stack = createStackNavigator();
 
@@ -46,6 +47,7 @@ const AppNavigator = () => {
         <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
         <Stack.Screen name="MyArticles" component={MyArticlesScreen} />
         <Stack.Screen name="CreateArticle" component={CreateArticleScreen} />
+        <Stack.Screen name="History" component={HistoryScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

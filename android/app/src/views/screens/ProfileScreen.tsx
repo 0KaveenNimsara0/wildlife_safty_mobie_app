@@ -71,6 +71,23 @@ const ProfileScreen = () => {
           </View>
         </View>
 
+        {role !== 'medical-officer' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Identification History</Text>
+            <TouchableOpacity 
+              style={styles.infoRow}
+              onPress={() => navigation.navigate('History')}
+            >
+              <Icon name="time-outline" size={20} color={COLORS.primary} style={styles.infoIcon} />
+              <View style={{flex: 1}}>
+                <Text style={styles.infoLabel}>View Archive</Text>
+                <Text style={styles.infoValue}>Your past identifications</Text>
+              </View>
+              <Icon name="chevron-forward" size={18} color={COLORS.lightText} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Information</Text>
           

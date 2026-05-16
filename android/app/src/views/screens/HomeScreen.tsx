@@ -57,7 +57,7 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [image, setImage] = useState<Asset | null>(null);
   const [resultData, setResultData] = useState<Partial<AnimalDetails> | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,7 +122,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     });
   };
 
-  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community' | 'ChatList' | 'Articles' | 'Notifications' | 'Discoveries') => {
+  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community' | 'ChatList' | 'Articles' | 'Notifications' | 'Discoveries' | 'History') => {
     setMenuVisible(false);
     if (screen === 'About') {
       setTimeout(() => setAboutVisible(true), 300);
@@ -157,6 +157,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     if (screen === 'Discoveries') {
       setTimeout(() => navigation.navigate('Discoveries'), 300);
     }
+    if (screen === 'History') {
+      setTimeout(() => navigation.navigate('History'), 300);
+    }
   };
 
   const identifyAnimal = async () => {
@@ -168,21 +171,35 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     setError(null);
     setResultData(null);
     hapticTrigger();
+
+    let result: any;
     if (isOnlineMode) {
-      const result = await IdentificationController.identifyOnline(image);
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setResultData(result);
-      }
+      result = await IdentificationController.identifyOnline(image);
     } else {
-      const result = await IdentificationController.identifyOffline(image.uri);
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setResultData(result);
+      result = await IdentificationController.identifyOffline(image.uri);
+    }
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setResultData(result);
+      
+      // Auto-save to history if user is logged in
+      if (user && token) {
+        try {
+          const saveRes = await IdentificationController.savePrediction(
+            image, 
+            result, 
+            user.uid || user._id, 
+            token
+          );
+          console.log('Prediction synced to history:', saveRes.success);
+        } catch (saveErr) {
+          console.error('Failed to sync prediction:', saveErr);
+        }
       }
     }
+
     setLoading(false);
     if (resultCardRef.current && typeof resultCardRef.current.fadeInUp === 'function') {
       resultCardRef.current.fadeInUp(800);

@@ -36,8 +36,10 @@ const ChatDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { user, token, role } = useContext(AuthContext);
-  const { conversation, otherParty } = route.params;
+  const { conversation: initialConv, otherParty: initialOther, medicalOfficer } = route.params;
   
+  const [conversation, setConversation] = useState(initialConv);
+  const [otherParty, setOtherParty] = useState(initialOther || medicalOfficer);
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -47,15 +49,49 @@ const ChatDetailScreen = () => {
 
   const fetchData = async (silent = false) => {
     if (!token || !role) return;
+    
+    let convId = conversation?._id;
+    
+    // If we don't have a conversation ID, try to generate it from participants
+    if (!convId && otherParty) {
+      const myId = user?.uid || user?._id;
+      const otherId = otherParty._id || otherParty.uid;
+      
+      if (myId && otherId) {
+        const myType = role === 'medical-officer' ? 'medical_officer' : 'user';
+        // In this app, we always chat with the opposite role
+        const otherType = role === 'medical-officer' ? 'user' : 'medical_officer';
+        
+        const ids = [myId, otherId].sort();
+        const types = [myType, otherType].sort();
+        convId = `${types[0]}_${ids[0]}_${types[1]}_${ids[1]}`;
+      }
+    }
+
+    if (!convId) {
+      if (!silent) setLoading(false);
+      return;
+    }
+
     try {
       if (!silent) setLoading(true);
       
-      const res = await AuthService.getMessages(conversation?._id, token, role);
+      const res = await AuthService.getMessages(convId, token, role);
       if (res.success) {
         setMessages(res.messages);
+        // If we found messages, we now have a valid conversation context
+        if (!conversation && res.messages.length > 0) {
+          setConversation({ _id: convId });
+        }
       }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
+    } catch (error: any) {
+      // 403 Forbidden is expected for new conversations with no message history yet
+      // We ignore it to prevent the red error box and just show an empty chat
+      if (error?.response?.status === 403 || error?.message?.includes('403')) {
+        setMessages([]);
+      } else {
+        console.error('Error fetching messages:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -65,7 +101,7 @@ const ChatDetailScreen = () => {
     fetchData();
     const interval = setInterval(() => fetchData(true), 3000);
     return () => clearInterval(interval);
-  }, [conversation?._id, token, role]);
+  }, [conversation?._id, otherParty?._id, otherParty?.uid, token, role]);
 
   const handleSend = async () => {
     if (!inputText.trim() || !token || !role) return;
@@ -88,6 +124,9 @@ const ChatDetailScreen = () => {
       const res = await AuthService.sendMessage(receiverId, text, token, role, receiverType as any);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
+        if (!conversation && res.message.conversationId) {
+          setConversation({ _id: res.message.conversationId });
+        }
         setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
       }
     } catch (error) {

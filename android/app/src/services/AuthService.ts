@@ -135,6 +135,20 @@ class AuthService {
     return response.data;
   }
 
+  async getUserHistory(uid: string, token: string): Promise<any> {
+    try {
+      const response = await axios.get(`${API_URL}/predictions/history/${uid}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response && error.response.data) {
+        throw new Error(error.response.data.message || 'Failed to fetch history');
+      }
+      throw new Error('Network error. Please check your connection.');
+    }
+  }
+
   async sendMessage(receiverId: string, message: string, token: string, role: Role, receiverType: 'user' | 'admin' = 'user'): Promise<any> {
     const prefix = role === 'medical-officer' ? '/medical-officer/chat' : '/user/chat';
     const response = await axios.post(`${API_URL}${prefix}/send/${receiverId}`, 

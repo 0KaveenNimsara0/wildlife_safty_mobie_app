@@ -1,13 +1,52 @@
 // controllers/IdentificationController.ts
 import { Asset } from 'react-native-image-picker';
 import { NativeModules } from 'react-native';
-import { PREDICTION_API_URL } from '../config/api';
+import { PREDICTION_API_URL, API_URL } from '../config/api';
 import snakeData from '../assets/snake_data.json';
 import { AnimalDetails } from '../models/AnimalDetails';
 
 const { ImageClassifier } = NativeModules;
 
 export class IdentificationController {
+  static async savePrediction(imageAsset: Asset, details: any, userId: string, token: string): Promise<any> {
+    const formData = new FormData();
+    
+    // Create a unique file name if not present
+    const fileName = imageAsset.fileName || `animal_${Date.now()}.jpg`;
+    
+    formData.append('identificationImage', {
+      uri: imageAsset.uri,
+      type: imageAsset.type || 'image/jpeg',
+      name: fileName,
+    } as any);
+    
+    formData.append('userId', userId);
+    formData.append('isAnonymous', !userId ? 'true' : 'false');
+    formData.append('className', details.Animal || details.ClassName || 'Unknown');
+    formData.append('commonName', details.Animal || details.CommonEnglishNames || 'Unknown');
+    formData.append('scientificName', details.ScientificName || 'Unknown');
+    formData.append('confidence', (details.Confidence || 100).toString());
+    formData.append('venom', details.Venom || 'Unknown');
+    formData.append('family', details.Family || 'Unknown');
+    formData.append('details', JSON.stringify(details));
+    
+    try {
+      const response = await fetch(`${API_URL}/predictions/save`, {
+        method: 'POST',
+        body: formData,
+        headers: { 
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      const data = await response.json();
+      return data;
+    } catch (e: any) {
+      console.error('Save prediction failed:', e);
+      return { error: e.message };
+    }
+  }
+
   static async identifyOffline(imageUri: string): Promise<Partial<AnimalDetails> | { error: string }> {
     try {
       const predictedClass = await ImageClassifier.classifyImage(imageUri);
