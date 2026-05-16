@@ -44,6 +44,15 @@ const PostDetailScreen = () => {
   const [editingComment, setEditingComment] = useState<any>(null);
   const [reactionMenuVisible, setReactionMenuVisible] = useState<string | null>(null);
 
+  const EMOJI_MAP: { [key: string]: string } = {
+    '👍': 'like',
+    '❤️': 'love',
+    '😂': 'laugh',
+    '😮': 'wow',
+    '😢': 'sad',
+    '😡': 'angry'
+  };
+
   const resolveUrl = (path: string) => {
     if (!path) return null;
     if (path.startsWith('http')) {
@@ -77,19 +86,22 @@ const PostDetailScreen = () => {
     }
   };
 
-  const handleReaction = async (commentId: string, type: string) => {
+  const handleReaction = async (commentId: string, emoji: string) => {
     if (!token || !user) return;
+    const reactionType = EMOJI_MAP[emoji] || 'like';
+    
     try {
-      const response = await axios.post(`${API_URL}/posts/${currentPost._id}/comments/${commentId}/like`, {
+      // Using the generic reactions endpoint for multi-type support
+      const response = await axios.post(`${API_URL}/posts/${currentPost._id}/comments/${commentId}/react`, {
         userId: user.uid || user._id,
-        type: type // The backend might need to be updated to handle specific types, but using 'like' for now as placeholder
+        userName: user.displayName || user.name || 'Anonymous',
+        type: reactionType
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (response.data) {
+      if (response.data.success) {
         setComments(comments.map(c => c._id === commentId ? { ...c, ...response.data } : c));
-        setReactionMenuVisible(null);
       }
     } catch (error) {
       console.error('Error reacting to comment:', error);
@@ -172,11 +184,36 @@ const PostDetailScreen = () => {
     const isOP = comment.authorId === currentPost.authorId;
     const isMedical = comment.authorRole === 'medical_officer' || comment.authorRole === 'medical-officer';
 
+    const renderReactionSummary = (comment: any) => {
+      if (!comment.reactionCounts) return null;
+      const TYPE_TO_EMOJI: { [key: string]: string } = {
+        'like': '👍', 'love': '❤️', 'laugh': '😂', 'wow': '😮', 'sad': '😢', 'angry': '😡'
+      };
+      
+      const emojisToShow = Object.entries(comment.reactionCounts)
+        .filter(([_, count]) => (count as number) > 0)
+        .map(([type]) => TYPE_TO_EMOJI[type])
+        .slice(0, 3);
+
+      if (emojisToShow.length === 0) return null;
+
+      return (
+        <View style={styles.reactionSummary}>
+          <View style={styles.emojiStack}>
+            {emojisToShow.map((emoji, i) => (
+              <Text key={emoji} style={[styles.summaryEmoji, { zIndex: 10 - i, marginLeft: i === 0 ? 0 : -5 }]}>{emoji}</Text>
+            ))}
+          </View>
+          <Text style={styles.totalReactionsText}>{comment.totalReactions || 0}</Text>
+        </View>
+      );
+    };
+
     return (
       <View key={comment._id} style={[styles.commentCard, isReply && styles.replyCard]}>
         {reactionMenuVisible === comment._id && (
           <View style={styles.reactionMenu}>
-            {['👍', '❤️', '😂', '😮', '😢', '😡'].map(emoji => (
+            {Object.keys(EMOJI_MAP).map(emoji => (
               <TouchableOpacity key={emoji} onPress={() => handleReaction(comment._id, emoji)} style={styles.emojiBtn}>
                 <Text style={styles.emojiText}>{emoji}</Text>
               </TouchableOpacity>
@@ -228,13 +265,11 @@ const PostDetailScreen = () => {
             <View style={styles.commentActions}>
               <TouchableOpacity 
                 style={styles.commentActionBtn} 
-                onPress={() => handleReaction(comment._id, 'like')}
+                onPress={() => handleReaction(comment._id, '👍')}
                 onLongPress={() => setReactionMenuVisible(comment._id)}
               >
                 <Icon name={isLiked ? "heart" : "heart-outline"} size={16} color={isLiked ? "#EF4444" : COLORS.mediumText} />
-                <Text style={[styles.commentActionText, isLiked && { color: "#EF4444" }]}>
-                  {comment.likes || 0}
-                </Text>
+                {renderReactionSummary(comment)}
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -654,6 +689,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.mediumText,
     marginLeft: 8,
+  },
+  reactionSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 6,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  emojiStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  summaryEmoji: {
+    fontSize: 12,
+  },
+  totalReactionsText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.mediumText,
+    marginLeft: 4,
   },
   inputWrapper: {
     padding: 15,

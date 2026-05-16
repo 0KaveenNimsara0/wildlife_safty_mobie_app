@@ -197,7 +197,12 @@ const CommunityScreen = () => {
           <Icon name="arrow-back" size={24} color={COLORS.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Community Feed</Text>
-        <View style={{ width: 44 }} />
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('MyPosts')} 
+          style={styles.myPostsButton}
+        >
+          <Icon name="images-outline" size={24} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -246,6 +251,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  myPostsButton: {
     width: 44,
     height: 44,
     borderRadius: 22,

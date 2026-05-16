@@ -73,15 +73,28 @@ const ProfileScreen = () => {
 
         {role !== 'medical-officer' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Identification History</Text>
+            <Text style={styles.sectionTitle}>My Activity</Text>
+            
             <TouchableOpacity 
               style={styles.infoRow}
               onPress={() => navigation.navigate('History')}
             >
               <Icon name="time-outline" size={20} color={COLORS.primary} style={styles.infoIcon} />
               <View style={{flex: 1}}>
-                <Text style={styles.infoLabel}>View Archive</Text>
-                <Text style={styles.infoValue}>Your past identifications</Text>
+                <Text style={styles.infoLabel}>Identification History</Text>
+                <Text style={styles.infoValue}>View past scan results</Text>
+              </View>
+              <Icon name="chevron-forward" size={18} color={COLORS.lightText} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.infoRow, { marginBottom: 0 }]}
+              onPress={() => navigation.navigate('MyPosts')}
+            >
+              <Icon name="images-outline" size={20} color="#2563EB" style={[styles.infoIcon, { backgroundColor: '#DBEAFE' }]} />
+              <View style={{flex: 1}}>
+                <Text style={styles.infoLabel}>My Sightings</Text>
+                <Text style={styles.infoValue}>Manage shared discoveries</Text>
               </View>
               <Icon name="chevron-forward" size={18} color={COLORS.lightText} />
             </TouchableOpacity>
