@@ -11,6 +11,7 @@ import {
   Image,
   SafeAreaView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -34,8 +35,8 @@ const COLORS = {
 const ChatDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { user, token } = useContext(AuthContext);
-  const { conversation, medicalOfficer } = route.params;
+  const { user, token, role } = useContext(AuthContext);
+  const { conversation, otherParty } = route.params;
   
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
@@ -44,20 +45,14 @@ const ChatDetailScreen = () => {
   
   const flatListRef = useRef<FlatList>(null);
 
-  const fetchMessages = async (silent = false) => {
-    if (!token) return;
+  const fetchData = async (silent = false) => {
+    if (!token || !role) return;
     try {
       if (!silent) setLoading(true);
       
-      // If we have a conversation, fetch its messages
-      if (conversation?._id) {
-        const res = await AuthService.getMessages(conversation._id, token);
-        if (res.success) {
-          setMessages(res.messages);
-        }
-      } else {
-        // New conversation, no messages yet
-        setMessages([]);
+      const res = await AuthService.getMessages(conversation?._id, token, role);
+      if (res.success) {
+        setMessages(res.messages);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -67,40 +62,44 @@ const ChatDetailScreen = () => {
   };
 
   useEffect(() => {
-    fetchMessages();
-    
-    // Polling for new messages (every 3 seconds like the website)
-    const interval = setInterval(() => {
-      if (conversation?._id) fetchMessages(true);
-    }, 3000);
-    
+    fetchData();
+    const interval = setInterval(() => fetchData(true), 3000);
     return () => clearInterval(interval);
-  }, [conversation?._id, token]);
+  }, [conversation?._id, token, role]);
 
   const handleSend = async () => {
-    if (!inputText.trim() || !token || !medicalOfficer?._id) return;
+    if (!inputText.trim() || !token || !role) return;
+    
+    // For users, receiver is otherParty?._id or otherParty?.uid
+    // For MOs, we use conversation details if available
+    const receiverId = otherParty?._id || otherParty?.uid || conversation?.userId || conversation?.participantId;
+    
+    if (!receiverId) {
+      Alert.alert('Error', 'Cannot identify receiver');
+      return;
+    }
 
     setSending(true);
     const text = inputText;
     setInputText('');
 
     try {
-      const res = await AuthService.sendMessage(medicalOfficer._id, text, token);
+      const receiverType = conversation?.admin || otherParty?.role === 'admin' ? 'admin' : 'user';
+      const res = await AuthService.sendMessage(receiverId, text, token, role, receiverType as any);
       if (res.success) {
         setMessages(prev => [...prev, res.message]);
-        // Scroll to bottom
         setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      setInputText(text); // Restore text on failure
+      setInputText(text);
     } finally {
       setSending(false);
     }
   };
 
   const renderMessage = ({ item }: { item: any }) => {
-    const isMine = item.senderId === user?.uid;
+    const isMine = item.senderId === user?.uid || item.senderId === user?._id;
     
     return (
       <View style={[styles.messageWrapper, isMine ? styles.myMessageWrapper : styles.otherMessageWrapper]}>
@@ -116,8 +115,18 @@ const ChatDetailScreen = () => {
     );
   };
 
-  const moAvatarUrl = medicalOfficer?.photoURL ? 
-    (medicalOfficer.photoURL.startsWith('http') ? medicalOfficer.photoURL : `${API_URL.replace('/api', '')}/${medicalOfficer.photoURL}`) : null;
+  const resolveAvatar = (path: string | undefined) => {
+    if (!path) return null;
+    if (path.startsWith('http')) {
+      return Platform.OS === 'android' ? path.replace('localhost', '10.0.2.2') : path;
+    }
+    const baseUrl = API_URL.replace('/api', '');
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${baseUrl}${cleanPath}`;
+  };
+
+  const name = otherParty?.name || otherParty?.displayName || (role === 'medical-officer' ? 'User' : 'Medical Officer');
+  const avatarUrl = resolveAvatar(otherParty?.photoURL || otherParty?.authorAvatar);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -128,14 +137,14 @@ const ChatDetailScreen = () => {
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <View style={styles.headerAvatar}>
-            {moAvatarUrl ? (
-              <Image source={{ uri: moAvatarUrl }} style={styles.headerAvatarImage} />
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.headerAvatarImage} />
             ) : (
-              <Text style={styles.headerAvatarText}>{medicalOfficer?.name?.charAt(0) || 'M'}</Text>
+              <Text style={styles.headerAvatarText}>{name.charAt(0)}</Text>
             )}
           </View>
           <View>
-            <Text style={styles.headerName}>{medicalOfficer?.name || 'Medical Officer'}</Text>
+            <Text style={styles.headerName}>{name}</Text>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
               <Text style={styles.statusText}>Online</Text>
@@ -157,7 +166,7 @@ const ChatDetailScreen = () => {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Start your conversation with Dr. {medicalOfficer?.name?.split(' ').pop()}</Text>
+              <Text style={styles.emptyText}>Start your conversation with {name}</Text>
             </View>
           }
         />

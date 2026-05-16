@@ -121,8 +121,8 @@ const AuthScreen = () => {
   };
 
   const handleVerifyOtp = async () => {
-    if (!otp) {
-      Alert.alert('Error', 'Please enter the OTP sent to your email.');
+    if (!otp || otp.length < 4) {
+      Alert.alert('Error', 'Please enter a valid OTP code.');
       return;
     }
     setOtpLoading(true);
@@ -155,6 +155,23 @@ const AuthScreen = () => {
       }
     } catch (err: any) {
       Alert.alert('Verification Failed', err.message);
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setOtpLoading(true);
+    try {
+      if (isLoginMode) {
+        // Re-run login to trigger OTP
+        await AuthService.login(email, password, role);
+      } else {
+        await AuthService.sendRegistrationOtp(email);
+      }
+      Alert.alert('Success', 'A new verification code has been sent to your email.');
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
     } finally {
       setOtpLoading(false);
     }
@@ -296,20 +313,24 @@ const AuthScreen = () => {
             <Text style={styles.modalTitle}>Verification Required</Text>
             <Text style={styles.modalSubtitle}>Please enter the OTP sent to {email}</Text>
             
-            <View style={[styles.inputContainer, { backgroundColor: COLORS.background }]}>
+            <View style={[styles.inputContainer, { backgroundColor: COLORS.background, marginBottom: 24 }]}>
               <Icon name="key-outline" size={20} color={COLORS.mediumText} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter OTP"
+                placeholder="Enter 6-digit code"
                 placeholderTextColor={COLORS.lightText}
                 keyboardType="number-pad"
+                maxLength={6}
                 value={otp}
                 onChangeText={setOtp}
+                textAlign="center"
+                letterSpacing={4}
+                style={{ fontSize: 20, fontWeight: '800' }}
               />
             </View>
 
             <TouchableOpacity 
-               style={styles.submitButtonContainer}
+               style={styles.modalSubmitButton}
                onPress={handleVerifyOtp}
                disabled={otpLoading}
             >
@@ -323,6 +344,15 @@ const AuthScreen = () => {
                    <Text style={styles.submitText}>Verify & Continue</Text>
                  )}
                </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.resendButton} 
+              onPress={handleResendOtp}
+              disabled={otpLoading}
+            >
+              <Text style={styles.resendText}>Didn't receive the code? </Text>
+              <Text style={styles.resendLink}>Resend</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -582,6 +612,31 @@ const styles = StyleSheet.create({
     color: COLORS.mediumText,
     textAlign: 'center',
     marginBottom: 24,
+  },
+  modalSubmitButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  resendButton: {
+    flexDirection: 'row',
+    marginTop: 20,
+    padding: 10,
+  },
+  resendText: {
+    fontSize: 14,
+    color: COLORS.mediumText,
+  },
+  resendLink: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
 });
 

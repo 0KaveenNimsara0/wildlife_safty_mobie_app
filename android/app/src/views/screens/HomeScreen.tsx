@@ -122,7 +122,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     });
   };
 
-  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community') => {
+  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community' | 'ChatList' | 'Articles' | 'Notifications' | 'Discoveries') => {
     setMenuVisible(false);
     if (screen === 'About') {
       setTimeout(() => setAboutVisible(true), 300);
@@ -147,6 +147,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     }
     if (screen === 'ChatList') {
       setTimeout(() => navigation.navigate('ChatList'), 300);
+    }
+    if (screen === 'Articles') {
+      setTimeout(() => navigation.navigate('Articles'), 300);
+    }
+    if (screen === 'Notifications') {
+      setTimeout(() => navigation.navigate('Notifications'), 300);
+    }
+    if (screen === 'Discoveries') {
+      setTimeout(() => navigation.navigate('Discoveries'), 300);
     }
   };
 

@@ -30,24 +30,25 @@ const COLORS = {
 
 const ChatListScreen = () => {
   const navigation = useNavigation<any>();
-  const { user, token } = useContext(AuthContext);
+  const { user, token, role } = useContext(AuthContext);
   const [conversations, setConversations] = useState<any[]>([]);
   const [medicalOfficers, setMedicalOfficers] = useState<any[]>([]);
+  const [activeFilter, setActiveFilter] = useState<'user' | 'admin'>('user');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = async (silent = false) => {
-    if (!token) return;
+    if (!token || !role) return;
     try {
       if (!silent) setLoading(true);
       
-      const [convRes, moRes] = await Promise.all([
-        AuthService.getConversations(token),
-        AuthService.getMedicalOfficers(token)
-      ]);
-
+      const convRes = await AuthService.getConversations(token, role);
       if (convRes.success) setConversations(convRes.conversations);
-      if (moRes.success) setMedicalOfficers(moRes.medicalOfficers);
+
+      if (role === 'user') {
+        const moRes = await AuthService.getMedicalOfficers(token);
+        if (moRes.success) setMedicalOfficers(moRes.medicalOfficers);
+      }
     } catch (error) {
       console.error('Error fetching chat data:', error);
     } finally {
@@ -62,32 +63,64 @@ const ChatListScreen = () => {
     }, [token])
   );
 
+  const filteredConversations = conversations.filter(conv => {
+    if (activeFilter === 'user') return !!conv.user;
+    if (activeFilter === 'admin') return !!conv.admin;
+    return true;
+  });
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchData(true);
   };
 
   const renderConversation = ({ item }: { item: any }) => {
-    const mo = item.medicalOfficer;
-    const moAvatarUrl = mo?.photoURL ? 
-      (mo.photoURL.startsWith('http') ? mo.photoURL : `${API_URL.replace('/api', '')}/${mo.photoURL}`) : null;
+    // ... (rest of renderConversation logic remains the same)
+    const otherPerson = item.medicalOfficer || item.admin || item.user;
+    const name = otherPerson?.name || otherPerson?.displayName || (role === 'medical-officer' ? 'User' : 'Medical Officer');
+    
+    const resolveAvatar = (path: string | undefined) => {
+      if (!path) return null;
+      if (path.startsWith('http')) {
+        return Platform.OS === 'android' ? path.replace('localhost', '10.0.2.2') : path;
+      }
+      const baseUrl = API_URL.replace('/api', '');
+      const cleanPath = path.startsWith('/') ? path : `/${path}`;
+      return `${baseUrl}${cleanPath}`;
+    };
+
+    const avatarUrl = resolveAvatar(otherPerson?.photoURL || otherPerson?.authorAvatar);
+
+    const isUser = !!item.user;
+    const isAdmin = !!item.admin;
+    const roleLabel = isUser ? 'User' : (isAdmin ? 'Admin' : '');
 
     return (
       <TouchableOpacity 
         style={styles.chatCard}
-        onPress={() => navigation.navigate('ChatDetail', { conversation: item, medicalOfficer: mo })}
+        onPress={() => navigation.navigate('ChatDetail', { 
+          conversation: item, 
+          otherParty: otherPerson 
+        })}
       >
         <View style={styles.avatarContainer}>
-          {moAvatarUrl ? (
-            <Image source={{ uri: moAvatarUrl }} style={styles.avatarImage} />
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
           ) : (
-            <Text style={styles.avatarText}>{mo?.name?.charAt(0) || 'M'}</Text>
+            <Text style={styles.avatarText}>{name.charAt(0)}</Text>
           )}
           {item.unreadCount > 0 && <View style={styles.unreadBadge} />}
         </View>
         <View style={styles.chatInfo}>
           <View style={styles.chatHeader}>
-            <Text style={styles.moName}>{mo?.name || 'Medical Officer'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.moName} numberOfLines={1}>{name}</Text>
+              {roleLabel ? (
+                <View style={[styles.roleBadge, isUser ? styles.userBadge : styles.adminBadge]}>
+                  <Text style={styles.roleBadgeText}>{roleLabel}</Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={styles.chatTime}>
               {item.lastMessage ? new Date(item.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
             </Text>
@@ -103,7 +136,7 @@ const ChatListScreen = () => {
 
   const renderMedicalOfficer = (mo: any) => {
     const moAvatarUrl = mo.photoURL ? 
-      (mo.photoURL.startsWith('http') ? mo.photoURL : `${API_URL.replace('/api', '')}/${mo.photoURL}`) : null;
+      (mo.photoURL.startsWith('http') ? mo.photoURL : `${API_URL.replace('/api', '')}${mo.photoURL.startsWith('/') ? '' : '/'}${mo.photoURL}`) : null;
 
     return (
       <TouchableOpacity 
@@ -149,21 +182,43 @@ const ChatListScreen = () => {
         style={{ flex: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
       >
-        {/* Available Officers Horizontal List */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Available Specialists</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moList}>
-            {medicalOfficers.map(renderMedicalOfficer)}
-          </ScrollView>
-        </View>
+        {/* Available Officers Horizontal List - Only for Users */}
+        {role === 'user' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Available Specialists</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moList}>
+              {medicalOfficers.map(renderMedicalOfficer)}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Filter Toggle - Only for MOs */}
+        {role === 'medical-officer' && (
+          <View style={styles.filterContainer}>
+            <View style={styles.filterPill}>
+              <TouchableOpacity 
+                style={[styles.filterTab, activeFilter === 'user' && styles.filterTabActive]}
+                onPress={() => setActiveFilter('user')}
+              >
+                <Text style={[styles.filterTabText, activeFilter === 'user' && styles.filterTabTextActive]}>USERS</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.filterTab, activeFilter === 'admin' && styles.filterTabActive]}
+                onPress={() => setActiveFilter('admin')}
+              >
+                <Text style={[styles.filterTabText, activeFilter === 'admin' && styles.filterTabTextActive]}>ADMIN CHAT</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Conversations List */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Channels</Text>
+          <Text style={styles.sectionTitle}>{role === 'medical-officer' ? (activeFilter === 'user' ? 'User Inquiries' : 'Admin Coordination') : 'Active Channels'}</Text>
           {loading ? (
             <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 20 }} />
-          ) : conversations.length > 0 ? (
-            conversations.map((item) => (
+          ) : filteredConversations.length > 0 ? (
+            filteredConversations.map((item) => (
               <React.Fragment key={item._id}>
                 {renderConversation({ item })}
               </React.Fragment>
@@ -171,7 +226,7 @@ const ChatListScreen = () => {
           ) : (
             <View style={styles.emptyContainer}>
               <Icon name="chatbubbles-outline" size={48} color={COLORS.lightText} />
-              <Text style={styles.emptyText}>No active conversations yet.</Text>
+              <Text style={styles.emptyText}>No {activeFilter} conversations found.</Text>
             </View>
           )}
         </View>
@@ -222,6 +277,41 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     paddingHorizontal: 20,
     marginBottom: 12,
+  },
+  filterContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginBottom: 5,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    padding: 4,
+    height: 48,
+  },
+  filterTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  filterTabActive: {
+    backgroundColor: COLORS.surface,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  filterTabText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.lightText,
+    letterSpacing: 1,
+  },
+  filterTabTextActive: {
+    color: COLORS.darkText,
   },
   moList: {
     paddingHorizontal: 15,
@@ -310,6 +400,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.darkText,
+    maxWidth: '65%',
+  },
+  roleBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  userBadge: {
+    backgroundColor: '#E0F2FE',
+  },
+  adminBadge: {
+    backgroundColor: '#FEE2E2',
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.mediumText,
+    textTransform: 'uppercase',
   },
   chatTime: {
     fontSize: 12,

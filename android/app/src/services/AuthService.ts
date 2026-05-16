@@ -119,23 +119,26 @@ class AuthService {
     return response.data;
   }
 
-  async getConversations(token: string): Promise<any> {
-    const response = await axios.get(`${API_URL}/user/chat/conversations`, {
+  async getConversations(token: string, role: Role): Promise<any> {
+    const prefix = role === 'medical-officer' ? '/medical-officer/chat' : '/user/chat';
+    const response = await axios.get(`${API_URL}${prefix}/conversations`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
   }
 
-  async getMessages(conversationId: string, token: string): Promise<any> {
-    const response = await axios.get(`${API_URL}/user/chat/messages/${conversationId}`, {
+  async getMessages(conversationId: string, token: string, role: Role): Promise<any> {
+    const prefix = role === 'medical-officer' ? '/medical-officer/chat' : '/user/chat';
+    const response = await axios.get(`${API_URL}${prefix}/messages/${conversationId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
   }
 
-  async sendMessage(medicalOfficerId: string, message: string, token: string): Promise<any> {
-    const response = await axios.post(`${API_URL}/user/chat/send/${medicalOfficerId}`, 
-      { message },
+  async sendMessage(receiverId: string, message: string, token: string, role: Role, receiverType: 'user' | 'admin' = 'user'): Promise<any> {
+    const prefix = role === 'medical-officer' ? '/medical-officer/chat' : '/user/chat';
+    const response = await axios.post(`${API_URL}${prefix}/send/${receiverId}`, 
+      { message, receiverType },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data;

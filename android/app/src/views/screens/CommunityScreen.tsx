@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
+  Alert,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
@@ -29,7 +31,7 @@ const COLORS = {
 
 const CommunityScreen = () => {
   const navigation = useNavigation<any>();
-  const { user, token } = useContext(AuthContext);
+  const { user, token, role } = useContext(AuthContext);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,12 +39,47 @@ const CommunityScreen = () => {
   const fetchPosts = async () => {
     try {
       const response = await axios.get(`${API_URL}/posts`);
-      setPosts(response.data);
+      if (response.data && response.data.posts) {
+        setPosts(response.data.posts);
+      } else {
+        setPosts(response.data);
+      }
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleLike = async (postId: string) => {
+    if (!token || !user) {
+      Alert.alert('Login Required', 'Please log in to like posts.');
+      return;
+    }
+    try {
+      const response = await axios.post(`${API_URL}/posts/${postId}/like`, { userId: user.uid || user._id }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPosts(posts.map(p => p._id === postId ? { ...p, likes: response.data.likes, likedBy: response.data.likedBy } : p));
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  const handleVerifyPost = async (postId: string, status: 'verified' | 'rejected') => {
+    if (!token) return;
+    try {
+      const res = await axios.post(`${API_URL}/medical-officer/posts/${postId}/verify`, { status }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data) {
+        Alert.alert('Success', `Post marked as ${status}`);
+        fetchPosts();
+      }
+    } catch (error) {
+      console.error('Error verifying post:', error);
+      Alert.alert('Error', 'Failed to submit verification');
     }
   };
 
@@ -56,13 +93,24 @@ const CommunityScreen = () => {
   };
 
   const renderPost = ({ item }: { item: any }) => {
-    // Backend uses photoUrl field for post images
-    const imageUrl = item.photoUrl ? (item.photoUrl.startsWith('http') ? item.photoUrl : `${API_URL.replace('/api', '')}${item.photoUrl.startsWith('/') ? '' : '/'}${item.photoUrl}`) : null;
-    
-    // Backend uses authorAvatar and authorName directly on the post
+    // Helper to resolve URLs
+    const resolveUrl = (path: string) => {
+      if (!path) return null;
+      if (path.startsWith('http')) {
+        // Fix localhost issue for Android emulator
+        if (Platform.OS === 'android' && path.includes('localhost')) {
+          return path.replace('localhost', '10.0.2.2');
+        }
+        return path;
+      }
+      const baseUrl = API_URL.replace('/api', '');
+      const cleanPath = path.startsWith('/') ? path : `/${path}`;
+      return `${baseUrl}${cleanPath}`;
+    };
+
+    const imageUrl = resolveUrl(item.photoUrl);
     const authorName = item.authorName || 'Anonymous';
-    const authorAvatarUrl = item.authorAvatar ? 
-      (item.authorAvatar.startsWith('http') ? item.authorAvatar : `${API_URL.replace('/api', '')}${item.authorAvatar.startsWith('/') ? '' : '/'}${item.authorAvatar}`) : null;
+    const authorAvatarUrl = resolveUrl(item.authorAvatar);
 
     return (
       <View style={styles.postCard}>
@@ -99,14 +147,44 @@ const CommunityScreen = () => {
 
         {/* Post Actions */}
         <View style={styles.postActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Icon name="heart-outline" size={20} color={COLORS.mediumText} />
-            <Text style={styles.actionText}>{item.likes?.length || 0}</Text>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => handleLike(item._id)}
+          >
+            <Icon 
+              name={item.likedBy?.includes(user?.uid) ? "heart" : "heart-outline"} 
+              size={20} 
+              color={item.likedBy?.includes(user?.uid) ? "#EF4444" : COLORS.mediumText} 
+            />
+            <Text style={[styles.actionText, item.likedBy?.includes(user?.uid) && { color: "#EF4444" }]}>
+              {item.likes || 0}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('PostDetail', { post: item })}
+          >
             <Icon name="chatbubble-outline" size={20} color={COLORS.mediumText} />
             <Text style={styles.actionText}>{item.comments?.length || 0}</Text>
           </TouchableOpacity>
+          
+          {/* Expert Controls */}
+          {role === 'medical-officer' && item.status !== 'verified' && (
+            <View style={styles.expertActions}>
+              <TouchableOpacity 
+                style={[styles.expertBtn, styles.verifyBtn]}
+                onPress={() => handleVerifyPost(item._id, 'verified')}
+              >
+                <Text style={styles.expertBtnText}>VERIFY</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.expertBtn, styles.rejectBtn]}
+                onPress={() => handleVerifyPost(item._id, 'rejected')}
+              >
+                <Text style={styles.expertBtnText}>REJECT</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -286,6 +364,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.mediumText,
     marginLeft: 6,
+  },
+  expertActions: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  expertBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  verifyBtn: {
+    backgroundColor: '#10B981',
+  },
+  rejectBtn: {
+    backgroundColor: '#94A3B8',
+  },
+  expertBtnText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: '800',
   },
   emptyContainer: {
     alignItems: 'center',

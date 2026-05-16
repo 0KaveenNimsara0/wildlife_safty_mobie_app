@@ -22,75 +22,81 @@ const COLORS = {
 interface MenuProps {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community' | 'ChatList') => void;
+  onNavigate: (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community' | 'ChatList' | 'Articles' | 'Notifications' | 'Discoveries') => void;
 }
 
 const Menu: React.FC<MenuProps> = ({ visible, onClose, onNavigate }) => {
-  const { user } = useContext(AuthContext);
+    const { user, role } = useContext(AuthContext);
+  
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        {/* Use an outer TouchableOpacity to close the menu when tapping the overlay */}
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
+          {/* Add a nested TouchableOpacity that does nothing to prevent taps inside the menu from closing it */}
+          <TouchableOpacity style={styles.menuContainer} activeOpacity={1}>
+            <SafeAreaView style={styles.safeArea}>
+  
+              {/* Profile / Auth Section */}
+              {user ? (
+                <TouchableOpacity style={styles.profileSection} onPress={() => onNavigate('Profile')}>
+                  <View style={styles.avatarSmall}>
+                    {user.photoURL ? (
+                      <Image 
+                        source={{ uri: user.photoURL.startsWith('http') ? user.photoURL : `${API_URL.replace('/api', '')}${user.photoURL.startsWith('/') ? '' : '/'}${user.photoURL}` }} 
+                        style={styles.avatarSmallImage} 
+                      />
+                    ) : (
+                      <Text style={styles.avatarSmallText}>
+                        {user.displayName ? user.displayName.charAt(0).toUpperCase() : (user.name ? user.name.charAt(0).toUpperCase() : 'U')}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.profileName} numberOfLines={1}>{user.displayName || user.name}</Text>
+                    <Text style={styles.profileEmail} numberOfLines={1}>{user.email}</Text>
+                  </View>
+                  <Icon name="chevron-forward" size={20} color={COLORS.lightText} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.loginSection} onPress={() => onNavigate('Auth')}>
+                  <View style={styles.loginIconBg}>
+                    <Icon name="log-in-outline" size={24} color={COLORS.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.loginTitle}>Login / Register</Text>
+                    <Text style={styles.loginSubtitle}>Access all features</Text>
+                  </View>
+                  <Icon name="chevron-forward" size={20} color={COLORS.lightText} style={{marginLeft: 'auto'}} />
+                </TouchableOpacity>
+              )}
+  
+              <View style={styles.menuHeader}>
+                <Text style={styles.menuTitle}>Menu</Text>
+                <TouchableOpacity style={styles.closeIconContainer} onPress={onClose}>
+                  <Icon name="close-outline" size={32} color={COLORS.darkText} />
+                </TouchableOpacity>
+              </View>
+  
+              <View style={styles.menuItemsGroup}>
+                <MenuItem icon="home-outline" text="Home" onPress={() => onNavigate('Home')} />
+                <MenuItem icon="people-outline" text="Community Feed" onPress={() => onNavigate('Community')} />
+                <MenuItem icon="chatbubbles-outline" text="Medical Support" onPress={() => onNavigate('ChatList')} />
+                <MenuItem icon="book-outline" text="Knowledge Center" onPress={() => onNavigate('Articles')} />
+                <MenuItem icon="notifications-outline" text="Notifications" onPress={() => onNavigate('Notifications')} />
+                
+                {role === 'medical-officer' && (
+                  <MenuItem icon="eye-outline" text="Check Discoveries" onPress={() => onNavigate('Discoveries' as any)} />
+                )}
 
-  return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      {/* Use an outer TouchableOpacity to close the menu when tapping the overlay */}
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        {/* Add a nested TouchableOpacity that does nothing to prevent taps inside the menu from closing it */}
-        <TouchableOpacity style={styles.menuContainer} activeOpacity={1}>
-          <SafeAreaView style={styles.safeArea}>
-
-            {/* Profile / Auth Section */}
-            {user ? (
-              <TouchableOpacity style={styles.profileSection} onPress={() => onNavigate('Profile')}>
-                <View style={styles.avatarSmall}>
-                  {user.photoURL ? (
-                    <Image 
-                      source={{ uri: user.photoURL.startsWith('http') ? user.photoURL : `${API_URL.replace('/api', '')}/${user.photoURL}` }} 
-                      style={styles.avatarSmallImage} 
-                    />
-                  ) : (
-                    <Text style={styles.avatarSmallText}>
-                      {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
-                    </Text>
-                  )}
-                </View>
-                <View style={{flex: 1}}>
-                  <Text style={styles.profileName} numberOfLines={1}>{user.displayName}</Text>
-                  <Text style={styles.profileEmail} numberOfLines={1}>{user.email}</Text>
-                </View>
-                <Icon name="chevron-forward" size={20} color={COLORS.lightText} />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.loginSection} onPress={() => onNavigate('Auth')}>
-                <View style={styles.loginIconBg}>
-                  <Icon name="log-in-outline" size={24} color={COLORS.primary} />
-                </View>
-                <View>
-                  <Text style={styles.loginTitle}>Login / Register</Text>
-                  <Text style={styles.loginSubtitle}>Access all features</Text>
-                </View>
-                <Icon name="chevron-forward" size={20} color={COLORS.lightText} style={{marginLeft: 'auto'}} />
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.menuHeader}>
-              <Text style={styles.menuTitle}>Menu</Text>
-              <TouchableOpacity style={styles.closeIconContainer} onPress={onClose}>
-                <Icon name="close-outline" size={32} color={COLORS.darkText} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.menuItemsGroup}>
-              <MenuItem icon="home-outline" text="Home" onPress={() => onNavigate('Home')} />
-              <MenuItem icon="people-outline" text="Community Feed" onPress={() => onNavigate('Community')} />
-              <MenuItem icon="chatbubbles-outline" text="Medical Support" onPress={() => onNavigate('ChatList')} />
-              <MenuItem icon="list-outline" text="Snake Details" onPress={() => onNavigate('Directory')} />
-              <MenuItem icon="medkit-outline" text="Emergency Info" onPress={() => onNavigate('Emergency')} />
-              <MenuItem icon="information-circle-outline" text="About Us" onPress={() => onNavigate('About')} />
-              <MenuItem icon="settings-outline" text="Settings" onPress={() => onNavigate('Settings')} />
-            </View>
+                <MenuItem icon="list-outline" text="Snake Details" onPress={() => onNavigate('Directory')} />
+                <MenuItem icon="medkit-outline" text="Emergency Info" onPress={() => onNavigate('Emergency')} />
+                <MenuItem icon="information-circle-outline" text="About Us" onPress={() => onNavigate('About')} />
+              </View>
 
             <View style={styles.footer}>
                 <Text style={styles.footerText}>Wildlife Safety v1.0</Text>

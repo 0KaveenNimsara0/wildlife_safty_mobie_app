@@ -13,6 +13,11 @@ import CommunityScreen from '../views/screens/CommunityScreen';
 import CreatePostScreen from '../views/screens/CreatePostScreen';
 import ChatListScreen from '../views/screens/ChatListScreen';
 import ChatDetailScreen from '../views/screens/ChatDetailScreen';
+import PostDetailScreen from '../views/screens/PostDetailScreen';
+import ArticlesScreen from '../views/screens/ArticlesScreen';
+import NotificationsScreen from '../views/screens/NotificationsScreen';
+import DiscoveriesScreen from '../views/screens/DiscoveriesScreen';
+import DiscoveryDetailScreen from '../views/screens/DiscoveryDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -30,6 +35,11 @@ const AppNavigator = () => {
         <Stack.Screen name="CreatePost" component={CreatePostScreen} />
         <Stack.Screen name="ChatList" component={ChatListScreen} />
         <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+        <Stack.Screen name="PostDetail" component={PostDetailScreen} />
+        <Stack.Screen name="Articles" component={ArticlesScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Discoveries" component={DiscoveriesScreen} />
+        <Stack.Screen name="DiscoveryDetail" component={DiscoveryDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
