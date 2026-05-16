@@ -1,5 +1,5 @@
 // screens/HomeScreen.tsx
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useContext} from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,7 @@ import Menu from '../components/Menu';
 import AboutScreen from './AboutScreen';
 import SnakeDirectoryScreen from './SnakeDirectoryScreen';
 import EmergencyScreen from './EmergencyScreen';
+import { AuthContext } from '../../context/AuthContext';
 
 // Import snake data
 import snakeData from '../../assets/snake_data.json';
@@ -56,6 +57,7 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
+  const { user } = useContext(AuthContext);
   const [image, setImage] = useState<Asset | null>(null);
   const [resultData, setResultData] = useState<Partial<AnimalDetails> | null>(null);
   const [loading, setLoading] = useState(false);
@@ -120,7 +122,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     });
   };
 
-  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency') => {
+  const handleNavigation = (screen: 'Home' | 'About' | 'Settings' | 'Directory' | 'Emergency' | 'Auth' | 'Profile' | 'Community') => {
     setMenuVisible(false);
     if (screen === 'About') {
       setTimeout(() => setAboutVisible(true), 300);
@@ -133,6 +135,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     }
     if (screen === 'Settings') {
       Alert.alert('Settings', 'Settings screen is not yet implemented.');
+    }
+    if (screen === 'Auth') {
+      setTimeout(() => navigation.navigate('Auth'), 300);
+    }
+    if (screen === 'Profile') {
+      setTimeout(() => navigation.navigate('Profile'), 300);
+    }
+    if (screen === 'Community') {
+      setTimeout(() => navigation.navigate('Community'), 300);
+    }
+    if (screen === 'ChatList') {
+      setTimeout(() => navigation.navigate('ChatList'), 300);
     }
   };
 
@@ -171,7 +185,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       <Header
         title="Wildlife Safety"
         onMenuPress={() => setMenuVisible(true)}
-        onEmergencyPress={() => setEmergencyVisible(true)}
+        onProfilePress={() => {
+          if (user) {
+            navigation.navigate('Profile');
+          } else {
+            navigation.navigate('Auth');
+          }
+        }}
       />
 
       <ScrollView
@@ -238,6 +258,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
                   <Icon name="book" size={24} color={COLORS.primary} />
                 </View>
                 <Text style={styles.quickCardText}>Directory</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.quickAccessRow}>
+              <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate('Community')}>
+                <View style={[styles.quickCardIconBgPrimary, { backgroundColor: '#DBEAFE' }]}>
+                  <Icon name="people" size={24} color="#2563EB" />
+                </View>
+                <Text style={styles.quickCardText}>Community</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate('ChatList')}>
+                <View style={[styles.quickCardIconBgPrimary, { backgroundColor: '#FEF3C7' }]}>
+                  <Icon name="chatbubbles" size={24} color="#D97706" />
+                </View>
+                <Text style={styles.quickCardText}>Support</Text>
               </TouchableOpacity>
             </View>
           </Animatable.View>

@@ -1,6 +1,7 @@
 // controllers/IdentificationController.ts
 import { Asset } from 'react-native-image-picker';
 import { NativeModules } from 'react-native';
+import { PREDICTION_API_URL } from '../config/api';
 import snakeData from '../assets/snake_data.json';
 import { AnimalDetails } from '../models/AnimalDetails';
 
@@ -48,8 +49,7 @@ export class IdentificationController {
       name: imageAsset.fileName || 'animal.jpg',
     });
     try {
-      const API_URL = 'http://192.168.8.156:5000/predict';
-      const response = await fetch(API_URL, {
+      const response = await fetch(PREDICTION_API_URL, {
         method: 'POST',
         body: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
