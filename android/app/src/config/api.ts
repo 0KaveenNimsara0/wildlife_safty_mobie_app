@@ -9,7 +9,7 @@
 // If using a PHYSICAL device over WiFi, set USE_PHYSICAL_DEVICE = true and enter your LAN IP.
 
 const USE_PHYSICAL_DEVICE = true;
-const PHYSICAL_DEVICE_IP = '192.168.1.5'; // Only used when USE_PHYSICAL_DEVICE is true
+const PHYSICAL_DEVICE_IP = '10.255.26.98'; // Only used when USE_PHYSICAL_DEVICE is true
 
 const BASE_HOST = USE_PHYSICAL_DEVICE ? PHYSICAL_DEVICE_IP : '10.0.2.2';
 const BASE_PORT = '5000';
