@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../../context/AuthContext';
 import AuthService from '../../services/AuthService';
 import { API_URL } from '../../config/api';
+import { OfflineSyncService } from '../../services/OfflineSyncService';
 
 const COLORS = {
   primary: '#15803D',
@@ -30,6 +31,7 @@ const COLORS = {
   pending: '#F59E0B',
   verified: '#10B981',
   corrected: '#3B82F6',
+  pending_sync: '#64748B',
 };
 
 const HistoryScreen = () => {
@@ -39,17 +41,93 @@ const HistoryScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchHistory = async () => {
-    if (!token || !user?.uid) return;
+  const fetchHistory = async (isPullToRefresh = false) => {
+    if (!user?.uid) return;
     try {
-      setLoading(true);
+      if (!isPullToRefresh) {
+        setLoading(true);
+      }
+
+      // 1. Load Local Cached History and Unsynced Local Predictions immediately
+      const cachedHistory = await OfflineSyncService.getCachedHistory(user.uid);
+      const pendingSightings = await OfflineSyncService.getPendingSightings();
+      
+      const mappedPending = pendingSightings
+        .filter((item) => !item.userId || item.userId === user.uid)
+        .map((item) => ({
+          _id: item.id,
+          userId: user.uid,
+          className: item.details.Animal || 'Unknown',
+          commonName: item.details.Animal || 'Unknown',
+          scientificName: item.details.ScientificName || 'Unknown',
+          family: item.details.Family || 'Unknown',
+          confidence: (item.details as any).Confidence || 100,
+          venom: item.details.Venom || 'Unknown',
+          treatment: item.details.Treatment || 'Seek immediate medical attention.',
+          description: item.details.Description || 'No description available.',
+          conservationStatus: item.details.ConservationStatus || 'Unknown',
+          funFact: item.details.FunFact || '',
+          imagePath: item.imageAsset.uri, // Local file URI
+          verificationStatus: 'pending_sync',
+          createdAt: item.createdAt,
+        }));
+
+      // Render the combination immediately for instant load times (premium!)
+      setHistory([...mappedPending, ...cachedHistory]);
+
+      // If we don't have a token, we can't fetch fresh records from the server, but we can display cached ones
+      if (!token) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      // 2. Fetch fresh data from the server
       const res = await AuthService.getUserHistory(user.uid, token);
       if (res.success) {
-        setHistory(res.predictions);
+        // Cache the latest server history for future offline use
+        await OfflineSyncService.saveCachedHistory(user.uid, res.predictions);
+        
+        // Render updated list
+        setHistory([...mappedPending, ...res.predictions]);
+
+        // 3. Trigger auto-sync in background to see if we can upload pending items now
+        const syncResult = await OfflineSyncService.syncPendingSightings(token, user.uid);
+        if (syncResult.successCount > 0) {
+          // If we synced some items, re-query to show them as verified/pending on the server
+          const remainingPending = await OfflineSyncService.getPendingSightings();
+          const remainingMapped = remainingPending
+            .filter((item) => !item.userId || item.userId === user.uid)
+            .map((item) => ({
+              _id: item.id,
+              userId: user.uid,
+              className: item.details.Animal || 'Unknown',
+              commonName: item.details.Animal || 'Unknown',
+              scientificName: item.details.ScientificName || 'Unknown',
+              family: item.details.Family || 'Unknown',
+              confidence: (item.details as any).Confidence || 100,
+              venom: item.details.Venom || 'Unknown',
+              treatment: item.details.Treatment || 'Seek immediate medical attention.',
+              description: item.details.Description || 'No description available.',
+              conservationStatus: item.details.ConservationStatus || 'Unknown',
+              funFact: item.details.FunFact || '',
+              imagePath: item.imageAsset.uri,
+              verificationStatus: 'pending_sync',
+              createdAt: item.createdAt,
+            }));
+
+          const updatedServerRes = await AuthService.getUserHistory(user.uid, token);
+          if (updatedServerRes.success) {
+            await OfflineSyncService.saveCachedHistory(user.uid, updatedServerRes.predictions);
+            setHistory([...remainingMapped, ...updatedServerRes.predictions]);
+          }
+        }
       }
     } catch (error: any) {
-      console.error('Error fetching history:', error);
-      Alert.alert('Error', error.message || 'Failed to fetch your history');
+      console.log('Fetch history network check:', error.message);
+      if (isPullToRefresh) {
+        Alert.alert('Offline Mode', 'Connection could not be established. Showing cached data from your phone.');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -62,11 +140,14 @@ const HistoryScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchHistory();
+    fetchHistory(true);
   };
 
   const resolveUrl = (path: string) => {
     if (!path) return null;
+    if (path.startsWith('file:') || path.startsWith('content:') || path.startsWith('data:')) {
+      return path;
+    }
     if (path.startsWith('http')) {
       return Platform.OS === 'android' ? path.replace('localhost', '10.0.2.2') : path;
     }
@@ -107,7 +188,7 @@ const HistoryScreen = () => {
               
               <View style={[styles.statusBadge, { backgroundColor: COLORS[item.verificationStatus as keyof typeof COLORS] + '15' }]}>
                 <Text style={[styles.statusText, { color: COLORS[item.verificationStatus as keyof typeof COLORS] }]}>
-                  {item.verificationStatus.toUpperCase()}
+                  {item.verificationStatus === 'pending_sync' ? 'OFFLINE' : item.verificationStatus.toUpperCase()}
                 </Text>
               </View>
             </View>

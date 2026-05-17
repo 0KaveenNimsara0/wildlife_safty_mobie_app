@@ -26,6 +26,7 @@ import LinearGradient from 'react-native-linear-gradient';
 // Import controllers
 import {ImageController} from '../../controllers/ImageController';
 import {IdentificationController} from '../../controllers/IdentificationController';
+import {OfflineSyncService} from '../../services/OfflineSyncService';
 
 // Import models
 import {AnimalDetails} from '../../models/AnimalDetails';
@@ -63,12 +64,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOnlineMode, setIsOnlineMode] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [selectionMode, setSelectionMode] = useState<'camera' | 'gallery'>('camera');
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [isAboutVisible, setAboutVisible] = useState(false);
   const [isDirectoryVisible, setDirectoryVisible] = useState(false);
   const [isEmergencyVisible, setEmergencyVisible] = useState(false);
   const resultCardRef = useRef<Animatable.View & View>(null);
+
+  const triggerSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      console.log('🔄 Triggering background sync...');
+      const res = await OfflineSyncService.syncPendingSightings(token, user?.uid || null);
+      if (res.successCount > 0) {
+        Alert.alert(
+          'Sync Complete',
+          `Successfully synchronized ${res.successCount} offline prediction(s) to the server database!`
+        );
+      }
+    } catch (err) {
+      console.error('Background sync failed:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   React.useEffect(() => {
     if (ImageClassifier && ImageClassifier.getModelFileName) {
@@ -82,7 +103,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     } else {
       console.warn('ImageClassifier.getModelFileName method not available');
     }
-  }, []);
+
+    // Try syncing any pending predictions on mount
+    triggerSync();
+  }, [token, user?.uid]);
 
   const hapticTrigger = () => {
     const options = {
@@ -98,6 +122,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     setResultData(null);
     setError(null);
     hapticTrigger();
+    if (newMode) {
+      setTimeout(() => triggerSync(), 300);
+    }
   };
 
   const handleImageCapture = () => {
@@ -173,9 +200,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     hapticTrigger();
 
     let result: any;
+    let didFallback = false;
+    let didSaveOffline = false;
+
     if (isOnlineMode) {
+      console.log('🌐 Attempting online identification...');
       result = await IdentificationController.identifyOnline(image);
+      
+      // Automatic fallback if online prediction fails due to connection/server issues
+      if (result.error && (
+        result.error.toLowerCase().includes('failed') ||
+        result.error.toLowerCase().includes('network') ||
+        result.error.toLowerCase().includes('server') ||
+        result.error.toLowerCase().includes('upload')
+      )) {
+        console.log('🔌 Online prediction failed. Falling back to offline classification...');
+        const offlineResult = await IdentificationController.identifyOffline(image.uri);
+        if (!offlineResult.error) {
+          result = offlineResult;
+          didFallback = true;
+        }
+      }
     } else {
+      console.log('📴 Doing offline identification...');
       result = await IdentificationController.identifyOffline(image.uri);
     }
 
@@ -184,18 +231,67 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     } else {
       setResultData(result);
       
-      // Auto-save to history if user is logged in
-      if (user && token) {
+      const currentUserId = user?.uid || user?._id || '';
+
+      if (isOnlineMode && !didFallback) {
+        // Save to online DB if user is logged in
+        if (token && currentUserId) {
+          try {
+            const saveRes = await IdentificationController.savePrediction(
+              image, 
+              result, 
+              currentUserId, 
+              token
+            );
+            
+            if (saveRes && !saveRes.error && (saveRes.success || saveRes._id)) {
+              console.log('Prediction saved directly to online database');
+            } else {
+              // If server fails to save or returns error, save locally
+              console.log('Server save failed, queueing locally instead');
+              await OfflineSyncService.savePendingSighting(image, result, currentUserId);
+              didSaveOffline = true;
+            }
+          } catch (saveErr) {
+            console.error('Failed to save prediction, queueing locally:', saveErr);
+            await OfflineSyncService.savePendingSighting(image, result, currentUserId);
+            didSaveOffline = true;
+          }
+        } else {
+          // If not logged in but online, save is anonymous
+          try {
+            await IdentificationController.savePrediction(image, result, '', '');
+          } catch (e) {
+            // Ignore
+          }
+        }
+      } else {
+        // Save locally to AsyncStorage queue in offline mode or fallback mode
         try {
-          const saveRes = await IdentificationController.savePrediction(
-            image, 
-            result, 
-            user.uid || user._id, 
-            token
+          await OfflineSyncService.savePendingSighting(image, result, currentUserId);
+          didSaveOffline = true;
+        } catch (localErr) {
+          console.error('Failed to save locally:', localErr);
+        }
+      }
+
+      // Show stylized user alerts for offline modes
+      if (didFallback) {
+        Alert.alert(
+          'Offline Fallback Active',
+          "Network connection is unstable. We identified the species using your device's local AI model, and saved it to your phone. It will automatically sync once your connection is restored!"
+        );
+      } else if (didSaveOffline) {
+        if (!isOnlineMode) {
+          Alert.alert(
+            'Offline Discovery Saved',
+            'Identification completed offline! The sighting has been temporarily stored on your phone and will auto-sync with the online database when you switch to Online mode or go online.'
           );
-          console.log('Prediction synced to history:', saveRes.success);
-        } catch (saveErr) {
-          console.error('Failed to sync prediction:', saveErr);
+        } else {
+          Alert.alert(
+            'Saved Locally',
+            'Could not reach database. Sighting saved locally to your device and will be synchronized automatically in the background!'
+          );
         }
       }
     }
@@ -220,12 +316,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         }}
       />
 
+      {isSyncing && (
+        <Animatable.View 
+          animation="slideInDown" 
+          duration={300} 
+          style={styles.syncingBanner}>
+          <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.syncingText}>Syncing offline discoveries to server...</Text>
+        </Animatable.View>
+      )}
+
       <ScrollView
         contentContainerStyle={styles.scrollView}
         showsVerticalScrollIndicator={false}>
 
         {/* Action Centric Main Screen (When no image is selected) */}
-        {!image ? (
+        {/* State 1: Clean Dashboard (No image and no results) */}
+        {!image && !resultData ? (
           <Animatable.View animation="fadeIn" duration={800} style={styles.actionContainer}>
             <View style={styles.welcomeSection}>
               <Text style={styles.welcomeTitle}>Identify Wildlife</Text>
@@ -303,11 +410,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               </TouchableOpacity>
             </View>
           </Animatable.View>
-        ) : (
+        ) : null}
+
+        {/* State 2: Review Image (Image selected, but not identified yet) */}
+        {image && !resultData ? (
           <Animatable.View animation="fadeIn" duration={600} style={styles.imageReviewContainer}>
             <View style={styles.imageReviewHeader}>
                <Text style={styles.sectionTitle}>Review Image</Text>
-               <TouchableOpacity onPress={() => setImage(null)} style={styles.cancelButton}>
+               <TouchableOpacity onPress={() => { setImage(null); setResultData(null); setError(null); }} style={styles.cancelButton}>
                  <Icon name="close" size={24} color={COLORS.darkText} />
                </TouchableOpacity>
             </View>
@@ -351,7 +461,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               </TouchableOpacity>
             </Animatable.View>
           </Animatable.View>
-        )}
+        ) : null}
 
         {/* Error Display */}
         {error && (
@@ -361,97 +471,130 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           </Animatable.View>
         )}
 
-        {/* Results Card */}
-        {resultData && (
-          <Animatable.View
-            ref={resultCardRef}
-            style={styles.resultCard}
-            animation="fadeInUp"
-            duration={800}>
-
-            <View style={styles.resultHeader}>
-              <Icon name="checkmark-circle" size={28} color={COLORS.success} />
-              <Text style={styles.resultBadge}>Identified</Text>
+        {/* State 3: Identified Discovery View (Image selected and successfully identified!) */}
+        {image && resultData ? (
+          <Animatable.View animation="fadeIn" duration={600} style={styles.resultContainer}>
+            {/* Header for result */}
+            <View style={styles.imageReviewHeader}>
+               <Text style={styles.sectionTitle}>Discovery Result</Text>
+               <TouchableOpacity onPress={() => { setImage(null); setResultData(null); setError(null); }} style={styles.cancelButton}>
+                 <Icon name="close" size={24} color={COLORS.darkText} />
+               </TouchableOpacity>
             </View>
 
-            <Text style={styles.resultTitle}>{resultData.Animal}</Text>
-            <Text style={styles.scientificName}>{resultData.ScientificName}</Text>
+            {/* Display the image taken with high premium rounded styling */}
+            <View style={styles.resultImageContainer}>
+              <Image source={{uri: image.uri}} style={styles.resultImage} />
+            </View>
 
-            <View style={styles.quickInfo}>
-              <View style={styles.infoChip}>
-                <Icon name="shield-checkmark" size={16} color={COLORS.primary} />
-                <Text style={styles.infoChipText} numberOfLines={1}>
-                  {resultData.ConservationStatus}
-                </Text>
+            {/* Render the full result card directly below the image */}
+            <Animatable.View
+              ref={resultCardRef}
+              style={[styles.resultCard, { marginTop: 20 }]}
+              animation="fadeInUp"
+              duration={800}>
+
+              <View style={styles.resultHeader}>
+                <Icon name="checkmark-circle" size={28} color={COLORS.success} />
+                <Text style={styles.resultBadge}>Identified</Text>
               </View>
 
-              {resultData.LocalNames && (
-                <View style={styles.infoChip}>
-                  <Icon name="language" size={16} color={COLORS.primary} />
-                  <Text style={styles.infoChipText} numberOfLines={7}>
-                    {resultData.LocalNames}
-                  </Text>
-                </View>
-              )}
+              <Text style={styles.resultTitle}>{resultData.Animal}</Text>
+              <Text style={styles.scientificName}>{resultData.ScientificName}</Text>
 
-              {resultData.Family && (
+              <View style={styles.quickInfo}>
                 <View style={styles.infoChip}>
-                  <Icon name="leaf" size={16} color={COLORS.primary} />
+                  <Icon name="shield-checkmark" size={16} color={COLORS.primary} />
                   <Text style={styles.infoChipText} numberOfLines={1}>
-                    {resultData.Family}
+                    {resultData.ConservationStatus}
                   </Text>
+                </View>
+
+                {resultData.LocalNames && (
+                  <View style={styles.infoChip}>
+                    <Icon name="language" size={16} color={COLORS.primary} />
+                    <Text style={styles.infoChipText} numberOfLines={7}>
+                      {resultData.LocalNames}
+                    </Text>
+                  </View>
+                )}
+
+                {resultData.Family && (
+                  <View style={styles.infoChip}>
+                    <Icon name="leaf" size={16} color={COLORS.primary} />
+                    <Text style={styles.infoChipText} numberOfLines={1}>
+                      {resultData.Family}
+                    </Text>
+                  </View>
+                )}
+
+                {resultData.EndemicStatus && (
+                  <View style={styles.infoChip}>
+                    <Icon name="location" size={16} color={COLORS.primary} />
+                    <Text style={styles.infoChipText} numberOfLines={1}>
+                      {resultData.EndemicStatus}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {resultData.Venom && (
+                <View style={styles.detailSection}>
+                  <View style={styles.detailHeader}>
+                    <Icon name="warning" size={20} color={COLORS.warning} />
+                    <Text style={styles.detailTitle}>Venom & Medical Significance</Text>
+                  </View>
+                  <Text style={styles.detailContent}>{resultData.Venom}</Text>
                 </View>
               )}
 
-              {resultData.EndemicStatus && (
-                <View style={styles.infoChip}>
-                  <Icon name="location" size={16} color={COLORS.primary} />
-                  <Text style={styles.infoChipText} numberOfLines={1}>
-                    {resultData.EndemicStatus}
-                  </Text>
+              {resultData.Treatment && (
+                <View style={styles.detailSection}>
+                  <View style={styles.detailHeader}>
+                    <Icon name="medkit" size={20} color={COLORS.error} />
+                    <Text style={styles.detailTitle}>Treatment</Text>
+                  </View>
+                  <Text style={styles.detailContent}>{resultData.Treatment}</Text>
                 </View>
               )}
-            </View>
 
-            {resultData.Venom && (
               <View style={styles.detailSection}>
                 <View style={styles.detailHeader}>
-                  <Icon name="warning" size={20} color={COLORS.warning} />
-                  <Text style={styles.detailTitle}>Venom & Medical Significance</Text>
+                  <Icon name="information-circle" size={20} color={COLORS.info} />
+                  <Text style={styles.detailTitle}>Description</Text>
                 </View>
-                <Text style={styles.detailContent}>{resultData.Venom}</Text>
+                <Text style={styles.detailContent}>{resultData.Description}</Text>
               </View>
-            )}
 
-            {resultData.Treatment && (
-              <View style={styles.detailSection}>
-                <View style={styles.detailHeader}>
-                  <Icon name="medkit" size={20} color={COLORS.error} />
-                  <Text style={styles.detailTitle}>Treatment</Text>
+              {resultData.FunFact && (
+                <View style={styles.funFactSection}>
+                  <View style={styles.detailHeader}>
+                    <Icon name="bulb" size={20} color={COLORS.accent} />
+                    <Text style={styles.detailTitle}>Did You Know?</Text>
+                  </View>
+                  <Text style={styles.funFactText}>{resultData.FunFact}</Text>
                 </View>
-                <Text style={styles.detailContent}>{resultData.Treatment}</Text>
-              </View>
-            )}
+              )}
+            </Animatable.View>
 
-            <View style={styles.detailSection}>
-              <View style={styles.detailHeader}>
-                <Icon name="information-circle" size={20} color={COLORS.info} />
-                <Text style={styles.detailTitle}>Description</Text>
-              </View>
-              <Text style={styles.detailContent}>{resultData.Description}</Text>
-            </View>
-
-            {resultData.FunFact && (
-              <View style={styles.funFactSection}>
-                <View style={styles.detailHeader}>
-                  <Icon name="bulb" size={20} color={COLORS.accent} />
-                  <Text style={styles.detailTitle}>Did You Know?</Text>
+            {/* Massive Premium floating/bottom button to scan another */}
+            <TouchableOpacity
+              onPress={() => { setImage(null); setResultData(null); setError(null); hapticTrigger(); }}
+              activeOpacity={0.8}
+              style={{ marginTop: 20, marginBottom: 30 }}>
+              <LinearGradient
+                colors={['#16A34A', '#15803D']}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 0}}
+                style={styles.identifyButton}>
+                <View style={styles.buttonContent}>
+                  <Icon name="camera" size={24} color={COLORS.white} />
+                  <Text style={styles.identifyButtonText}>Scan Another Animal</Text>
                 </View>
-                <Text style={styles.funFactText}>{resultData.FunFact}</Text>
-              </View>
-            )}
+              </LinearGradient>
+            </TouchableOpacity>
           </Animatable.View>
-        )}
+        ) : null}
       </ScrollView>
 
       {/* Menu Modal */}
@@ -875,6 +1018,41 @@ const styles = StyleSheet.create({
     color: COLORS.darkText,
     lineHeight: 24,
     fontStyle: 'italic',
+  },
+  resultContainer: {
+    width: '100%',
+  },
+  resultImageContainer: {
+    width: '100%',
+    height: 240,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 10,
+  },
+  resultImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  syncingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 8,
+    width: '100%',
+  },
+  syncingText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
 });
 
