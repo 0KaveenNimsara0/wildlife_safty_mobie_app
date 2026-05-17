@@ -73,3 +73,9 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# React Native Android bundle and compiled resources
+android/app/src/main/assets/index.android.bundle
+android/app/src/main/assets/index.android.bundle.meta
+android/app/src/main/res/drawable-*
+android/app/src/main/res/raw/
